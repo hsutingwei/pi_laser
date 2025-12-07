@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Sync repository to fixed folder on Pi
         run: |
-          REPO_DIR=/home/d113453036/repos/pi_laser
+          REPO_DIR=/home/d113453036/pi_laser
 
           if [ -d "$REPO_DIR/.git" ]; then
             echo "[sync] repo exists, pulling..."
