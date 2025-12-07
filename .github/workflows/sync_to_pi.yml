@@ -1,0 +1,26 @@
+name: Sync code to Raspberry Pi
+
+on:
+  push:
+    branches: [ "main" ]   # 你要觸發的分支，現在先用 main
+
+jobs:
+  sync:
+    runs-on: self-hosted   # 用你那台叫 pi_laser 的 runner
+    steps:
+      - name: Sync repository to fixed folder on Pi
+        run: |
+          REPO_DIR=/home/d113453036/repos/pi_laser
+
+          if [ -d "$REPO_DIR/.git" ]; then
+            echo "[sync] repo exists, pulling..."
+            cd "$REPO_DIR"
+            git fetch origin
+            git reset --hard origin/main
+          else
+            echo "[sync] repo not found, cloning..."
+            mkdir -p "$(dirname "$REPO_DIR")"
+            git clone https://github.com/hsutingwei/pi_laser.git "$REPO_DIR"
+          fi
+
+          echo "[sync] done."
