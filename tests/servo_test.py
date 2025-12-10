@@ -22,16 +22,16 @@ def set_angle(pwm, angle):
 
 try:
     while True:
-        print("PAN → LEFT")
+        print("PAN -> LEFT")
         set_angle(pan, 30)
 
-        print("PAN → RIGHT")
+        print("PAN -> RIGHT")
         set_angle(pan, 150)
 
-        print("TILT → UP")
+        print("TILT -> UP")
         set_angle(tilt, 40)
 
-        print("TILT → DOWN")
+        print("TILT -> DOWN")
         set_angle(tilt, 120)
 
 except KeyboardInterrupt:
