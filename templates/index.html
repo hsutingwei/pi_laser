@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi Laser Gimbal</title>
+    <style>
+        body {
+            margin: 0;
+            background: #111;
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #video-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 4/3;
+            background: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+        }
+        #video-stream {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            text-shadow: 1px 1px 2px black;
+            pointer-events: none;
+        }
+        .status-badge {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #555;
+        }
+        .indicator.active { background: #0f0; box-shadow: 0 0 5px #0f0; }
+        .indicator.danger { background: #f00; box-shadow: 0 0 5px #f00; }
+        
+        #controls-hint {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            text-align: right;
+            font-size: 0.8em;
+            opacity: 0.7;
+        }
+        .button-hint {
+            display: inline-block;
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            margin: 0 2px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <div id="video-container">
+        <img id="video-stream" src="/video_feed" alt="Video Stream">
+        
+        <div class="hud">
+            <div class="status-badge">
+                <div id="status-conn" class="indicator"></div>
+                <span id="txt-conn">Disconnected</span>
+            </div>
+            <div class="status-badge">
+                <div id="status-laser" class="indicator"></div>
+                <span>LASER</span>
+            </div>
+            <div class="status-badge">
+                <span>MODE: </span>
+                <strong id="txt-mode" style="color: #0cf">MANUAL</strong>
+            </div>
+            <div class="status-badge">
+                <span>PAN: <span id="val-pan">90</span>°</span>
+                <span>TILT: <span id="val-tilt">80</span>°</span>
+            </div>
+        </div>
+
+        <div id="controls-hint">
+            <div><span class="button-hint">L-Stick</span> Aim</div>
+            <div><span class="button-hint">A</span> Laser Toggle</div>
+            <div><span class="button-hint">X</span> Auto Wobble</div>
+        </div>
+    </div>
+
+    <script src="static/js/controller.js"></script>
+</body>
+</html>

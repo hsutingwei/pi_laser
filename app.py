@@ -1,28 +1,135 @@
 from flask import Flask, render_template, Response
+from flask_socketio import SocketIO, emit
+from modules.servo_controller import ServoController
+from modules.laser_controller import LaserController
+from modules.wobble_engine import WobbleEngine
+from gpiozero.pins.pigpio import PiGPIOFactory
+import time
 
+# --- Setup ---
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-# TODO: Initialize Modules
-# vision_module = VisionModule()
-# servo_module = ServoModule()
-# safety_module = SafetyModule()
+# Initialize Hardware
+try:
+    factory = PiGPIOFactory()
+except:
+    print("MOCK: Could not connect to pigpio. Running in MOCK mode.")
+    factory = None
 
+servos = ServoController(factory)
+laser = LaserController(factory)
+wobble = WobbleEngine(servos)
+
+# State
+APP_STATE = {
+    "mode": "manual", # or "auto" (wobble)
+    "laser": False
+}
+
+# --- Routes ---
 @app.route('/')
 def index():
-    # TODO: Render main control page
-    return "Hello, Cat Laser! (TODO: Implement UI)"
+    return render_template('index.html')
+
+def gen_frames():
+    # Placeholder for Camera Streamer
+    # In a real impl, this would yield frames from camera_streamer.py
+    import cv2
+    cap = cv2.VideoCapture(0) # Default USB camera
+    if not cap.isOpened():
+        # Fallback dummy image if no cam
+        while True:
+            time.sleep(1)
+            yield b''
+            
+    while True:
+        success, frame = cap.read()
+        if not success:
+            break
+        # Resize for performance 640x480
+        frame = cv2.resize(frame, (640, 480))
+        ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
+        frame_bytes = buffer.tobytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
 
 @app.route('/video_feed')
 def video_feed():
-    # TODO: Return MJPEG stream from Vision Module
-    return "Video Feed Placeholder"
+    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@app.route('/api/control', methods=['POST'])
-def control():
-    # TODO: Handle manual control or mode switching
-    pass
+# --- WebSocket Events ---
+
+@socketio.on('connect')
+def handle_connect():
+    print("Client connected")
+    emit('server_status', {'msg': 'Connected to Pi Controller'})
+    # Sync state
+    emit('gimbal_state', {
+        'pan': servos.current_pan, 
+        'tilt': servos.current_tilt,
+        'laser': laser.state,
+        'mode': APP_STATE['mode']
+    })
+
+@socketio.on('joystick_control')
+def handle_joystick(data):
+    if APP_STATE['mode'] != 'manual':
+        return # Ignore joystick in auto mode
+
+    # Data: {'pan': float (-1~1), 'tilt': float (-1~1)}
+    # Convert joystick -1~1 to speed or direct angle mapping?
+    # Usually direct mapping is absolute positioning, or rate control.
+    # User JSON implies control. Let's do Rate Control (Joystick holding left moves left)
+    # OR Absolute Mapping?
+    # "Controls: pan: Left joystick X-axis". Usually for camera gimbal, Absolute or Rate?
+    # Let's try RATE control for smooth aiming. Joystick push = velocity.
+    
+    pan_input = data.get('pan_axis', 0.0)
+    tilt_input = data.get('tilt_axis', 0.0)
+    
+    # Deadzone
+    if abs(pan_input) < 0.1: pan_input = 0
+    if abs(tilt_input) < 0.1: tilt_input = 0
+    
+    # Speed factor (degrees per tick)
+    SPEED = 2.0 
+    
+    d_pan = pan_input * SPEED
+    d_tilt = tilt_input * -SPEED # Y-axis usually inverted (Up is -1 in HTML Gamepad usually, check JS)
+    
+    real_pan, real_tilt = servos.move_relative(d_pan, d_tilt)
+    
+    # Emit back for UI update (optimize: don't emit every tick if high freq)
+    # emit('gimbal_state_update', {'pan': real_pan, 'tilt': real_tilt}, broadcast=False)
+
+@socketio.on('toggle_laser')
+def handle_laser_toggle():
+    new_state = laser.toggle()
+    emit('gimbal_state', {'laser': new_state})
+
+@socketio.on('toggle_wobble')
+def handle_wobble_toggle():
+    if APP_STATE['mode'] == 'manual':
+        APP_STATE['mode'] = 'auto'
+        wobble.start(pattern="circle") # Default to circle
+    else:
+        APP_STATE['mode'] = 'manual'
+        wobble.stop()
+    
+    emit('gimbal_state', {'mode': APP_STATE['mode']})
+
+@socketio.on('set_mode')
+def handle_set_mode(data):
+    mode = data.get('mode')
+    if mode == 'auto':
+        APP_STATE['mode'] = 'auto'
+        wobble.start(pattern="random")
+    else:
+        APP_STATE['mode'] = 'manual'
+        wobble.stop()
+    emit('gimbal_state', {'mode': APP_STATE['mode']})
 
 if __name__ == '__main__':
-    # Run Flask
-    # Note: In production/deployment, use a proper WSGI server or ensure threaded=True for streaming
-    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+    # Listen on all interfaces
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
