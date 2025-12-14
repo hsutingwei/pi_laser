@@ -1,4 +1,4 @@
-from flask import Flask, render_template, Response
+from flask import Flask, render_template, Response, request
 from flask_socketio import SocketIO, emit
 from modules.servo_controller import ServoController
 from modules.laser_controller import LaserController
