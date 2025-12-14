@@ -277,70 +277,93 @@ window.addEventListener('keyup', (e) => {
         case 'ArrowLeft': case 'a': case 'A': keys.left = false; break;
         case 'ArrowRight': case 'd': case 'D': keys.right = false; break;
     }
-});
+    // Safety Limits
+    document.getElementById('btn-lim-tilt-min').addEventListener('click', () => {
+        setLimit('tilt', 'min');
+    });
+    document.getElementById('btn-lim-tilt-max').addEventListener('click', () => {
+        setLimit('tilt', 'max');
+    });
 
-let lastAxisEmit = 0;
+    function setLimit(axis, type) {
+        fetch('/api/limits/set', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ axis: axis, type: type })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    alert(`Limit Set! ${axis} ${type} = ${data.val}`);
+                } else {
+                    alert('Error: ' + data.msg);
+                }
+            });
+    }
 
-function updateLoop() {
-    // 1. Handle Gamepad
-    if (gamepadIndex !== null) {
-        const gp = navigator.getGamepads()[gamepadIndex];
-        if (gp) {
-            handleButtons(gp);
-            handleAxes(gp);
+    let lastAxisEmit = 0;
+
+    function handleButtons(gp) {
+        if (gp.buttons[0].pressed && !lastBtnA) {
+            socket.emit('toggle_laser');
+            lastBtnA = true;
+        } else if (!gp.buttons[0].pressed) {
+            lastBtnA = false;
+        }
+
+        if (gp.buttons[2].pressed && !lastBtnX) {
+            // socket.emit('toggle_wobble'); // Disable old wobble button
+            lastBtnX = true;
+        } else if (!gp.buttons[2].pressed) {
+            lastBtnX = false;
         }
     }
-    // 2. Handle Keyboard
-    handleKeyboardAxes();
-    requestAnimationFrame(updateLoop);
-}
 
-function handleButtons(gp) {
-    if (gp.buttons[0].pressed && !lastBtnA) {
-        socket.emit('toggle_laser');
-        lastBtnA = true;
-    } else if (!gp.buttons[0].pressed) {
-        lastBtnA = false;
+    function handleAxes(gp) {
+        if (currentMode !== 'manual') return;
+        const now = Date.now();
+        if (now - lastAxisEmit < 20) return;
+
+        const pan = gp.axes[0];
+        const tilt = gp.axes[1];
+
+        if (Math.abs(pan) > 0.05 || Math.abs(tilt) > 0.05) {
+            socket.emit('joystick_control', { pan_axis: pan, tilt_axis: tilt });
+            lastAxisEmit = now;
+        }
     }
 
-    if (gp.buttons[2].pressed && !lastBtnX) {
-        // socket.emit('toggle_wobble'); // Disable old wobble button
-        lastBtnX = true;
-    } else if (!gp.buttons[2].pressed) {
-        lastBtnX = false;
+    function handleKeyboardAxes() {
+        if (currentMode !== 'manual') return;
+        const now = Date.now();
+        if (now - lastAxisEmit < 20) return;
+
+        let pan = 0;
+        let tilt = 0;
+        if (keys.left) pan -= 1;
+        if (keys.right) pan += 1;
+        if (keys.up) tilt -= 1;
+        if (keys.down) tilt += 1;
+
+        if (pan !== 0 || tilt !== 0) {
+            socket.emit('joystick_control', { pan_axis: pan, tilt_axis: tilt });
+            lastAxisEmit = now;
+        }
     }
-}
 
-function handleAxes(gp) {
-    if (currentMode !== 'manual') return;
-    const now = Date.now();
-    if (now - lastAxisEmit < 20) return;
-
-    const pan = gp.axes[0];
-    const tilt = gp.axes[1];
-
-    if (Math.abs(pan) > 0.05 || Math.abs(tilt) > 0.05) {
-        socket.emit('joystick_control', { pan_axis: pan, tilt_axis: tilt });
-        lastAxisEmit = now;
+    function updateLoop() {
+        // 1. Handle Gamepad
+        if (gamepadIndex !== null) {
+            const gp = navigator.getGamepads()[gamepadIndex];
+            if (gp) {
+                handleButtons(gp);
+                handleAxes(gp);
+            }
+        }
+        // 2. Handle Keyboard
+        handleKeyboardAxes();
+        requestAnimationFrame(updateLoop);
     }
-}
 
-function handleKeyboardAxes() {
-    if (currentMode !== 'manual') return;
-    const now = Date.now();
-    if (now - lastAxisEmit < 20) return;
-
-    let pan = 0;
-    let tilt = 0;
-    if (keys.left) pan -= 1;
-    if (keys.right) pan += 1;
-    if (keys.up) tilt -= 1;
-    if (keys.down) tilt += 1;
-
-    if (pan !== 0 || tilt !== 0) {
-        socket.emit('joystick_control', { pan_axis: pan, tilt_axis: tilt });
-        lastAxisEmit = now;
-    }
-}
-
-updateLoop();
+    // Start Loop
+    updateLoop();

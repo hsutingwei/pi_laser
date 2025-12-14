@@ -33,6 +33,12 @@ except:
     factory = None
 
 servos = ServoController(factory)
+# Apply saved limits
+s_conf = CONFIG.get('servos', {})
+p_lim = s_conf.get('pan_limits_deg')
+t_lim = s_conf.get('tilt_limits_deg')
+servos.set_limits(p_lim, t_lim)
+
 laser = LaserController(factory)
 
 # Initialize Logic Modules
@@ -94,6 +100,59 @@ def add_sample():
 def fit_calibration():
     res = calibration.fit()
     return jsonify(res)
+
+@app.route('/api/limits/set', methods=['POST'])
+def set_limits():
+    """
+    Sets a servo limit to the CURRENT angle or a specific value.
+    Payload: { "axis": "tilt", "type": "min" } -> Sets Tilt Min to current tilt
+    """
+    data = request.json
+    axis = data.get('axis') # 'pan' or 'tilt'
+    lim_type = data.get('type') # 'min' or 'max'
+    
+    current_val = 0
+    if axis == 'pan': current_val = servos.current_pan
+    elif axis == 'tilt': current_val = servos.current_tilt
+    
+    # Update Config Object
+    if 'servos' not in CONFIG: CONFIG['servos'] = {}
+    
+    # Get current or create default
+    if axis == 'pan':
+        if 'pan_limits_deg' not in CONFIG['servos']: CONFIG['servos']['pan_limits_deg'] = [0, 180]
+        limits = CONFIG['servos']['pan_limits_deg']
+    else:
+        if 'tilt_limits_deg' not in CONFIG['servos']: CONFIG['servos']['tilt_limits_deg'] = [0, 180]
+        limits = CONFIG['servos']['tilt_limits_deg']
+        
+    # Modify
+    if lim_type == 'min': limits[0] = current_val
+    elif lim_type == 'max': limits[1] = current_val
+    
+    # Apply to Hardware Immediately
+    p_lim = CONFIG['servos'].get('pan_limits_deg')
+    t_lim = CONFIG['servos'].get('tilt_limits_deg')
+    servos.set_limits(p_lim, t_lim)
+    
+    # Make sure AutoPilot knows too (since it has its own copy of limits usually)
+    # Actually AutoPilot reads self.servos... no, it reads 'config' dict in init.
+    # We should update AutoPilot config reference if possible, or restart it.
+    # For now, let's just update the specific attributes if they exist
+    if autopilot:
+        autopilot.pan_limits = p_lim if p_lim else [0, 180]
+        autopilot.tilt_limits = t_lim if t_lim else [0, 180]
+
+    # Save Config to Disk
+    try:
+        with open(CONFIG_PATH, 'w') as f:
+            json.dump(CONFIG, f, indent=4)
+        print(f"[Limits] Saved new {axis} {lim_type} limit: {current_val}")
+    except Exception as e:
+        print(f"[Limits] Error saving config: {e}")
+        return jsonify({"status": "error", "msg": str(e)}), 500
+
+    return jsonify({"status": "ok", "limits": limits, "val": current_val})
 
 @app.route('/api/mock_detection', methods=['POST'])
 def mock_detection():

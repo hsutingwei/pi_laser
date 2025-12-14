@@ -31,6 +31,10 @@ class ServoController:
         self.pan_servo = None
         self.tilt_servo = None
         
+        # Initialize Limits (Dynamic)
+        self.pan_limits = [PAN_MIN_ANGLE, PAN_MAX_ANGLE]
+        self.tilt_limits = [TILT_MIN_ANGLE, TILT_MAX_ANGLE]
+        
         if self.factory:
             self.pan_servo = Servo(PIN_PAN, min_pulse_width=MIN_PULSE, max_pulse_width=MAX_PULSE, pin_factory=self.factory)
             self.tilt_servo = Servo(PIN_TILT, min_pulse_width=MIN_PULSE, max_pulse_width=MAX_PULSE, pin_factory=self.factory)
@@ -42,6 +46,11 @@ class ServoController:
         self.set_pan(90)
         self.set_tilt(80) # Calibrated Center
 
+    def set_limits(self, pan_limits=None, tilt_limits=None):
+        if pan_limits: self.pan_limits = pan_limits
+        if tilt_limits: self.tilt_limits = tilt_limits
+        print(f"[Servo] Limits updated: Pan={self.pan_limits}, Tilt={self.tilt_limits}")
+
     def _map_angle_to_value(self, angle):
         """Maps 0-180 degree to -1 to 1 value for gpiozero"""
         # gpiozero: -1 = min_pulse, 1 = max_pulse
@@ -51,7 +60,7 @@ class ServoController:
 
     def set_pan(self, angle):
         """Safely set Pan angle within limits"""
-        clamped = max(PAN_MIN_ANGLE, min(angle, PAN_MAX_ANGLE))
+        clamped = max(self.pan_limits[0], min(angle, self.pan_limits[1]))
         self.current_pan = clamped
         if self.pan_servo:
             val = self._map_angle_to_value(clamped)
@@ -60,7 +69,7 @@ class ServoController:
 
     def set_tilt(self, angle):
         """Safely set Tilt angle within limits"""
-        clamped = max(TILT_MIN_ANGLE, min(angle, TILT_MAX_ANGLE))
+        clamped = max(self.tilt_limits[0], min(angle, self.tilt_limits[1]))
         self.current_tilt = clamped
         if self.tilt_servo:
             val = self._map_angle_to_value(clamped)
