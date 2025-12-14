@@ -8,14 +8,22 @@ let calibMode = 'none'; // 'none', 'x_calib', 'y_calib'
 // DOM Elements
 const elConn = document.getElementById('status-conn');
 const txtConn = document.getElementById('txt-conn');
-const txtLaser = document.getElementById('txt-laser-state'); // Updated ID
-const txtMode = document.getElementById('txt-mode');
+
+// HUD Elements (Overlay)
+const elHudLaser = document.getElementById('status-laser'); // The dot indicator
+const txtHudMode = document.getElementById('txt-mode');     // The text in HUD
+
+// Panel Elements (Right Side)
+const txtPanelLaser = document.getElementById('panel-laser');
+const txtPanelMode = document.getElementById('panel-mode');
+
 const valPan = document.getElementById('val-pan');
 const valTilt = document.getElementById('val-tilt');
 const imgStream = document.getElementById('video-stream');
 const canvas = document.getElementById('video-overlay');
 const ctx = canvas.getContext('2d');
 const elCalibStatus = document.getElementById('calib-status');
+const btnAuto = document.getElementById('btn-toggle-auto');
 
 // --- MJPEG Reconnection Logic ---
 let streamErrors = 0;
@@ -48,15 +56,27 @@ socket.on('disconnect', () => {
 socket.on('gimbal_state', (data) => {
     if (data.laser !== undefined) {
         const isOn = data.laser;
-        txtLaser.innerText = isOn ? "ON" : "OFF";
-        txtLaser.style.color = isOn ? "#f00" : "#fff";
+        // Panel Text
+        txtPanelLaser.innerText = isOn ? "ON" : "OFF";
+        txtPanelLaser.style.color = isOn ? "#f00" : "#fff";
+        // HUD Dot
+        if (isOn && elHudLaser) elHudLaser.classList.add('active'); // active=green? wait, laser is red usually.
+        else if (elHudLaser) elHudLaser.classList.remove('active');
+
+        // Wait, index.html CSS says .indicator.danger { background: #f00 }
+        // Let's use 'danger' class for laser
+        if (isOn && elHudLaser) elHudLaser.classList.add('danger');
+        else if (elHudLaser) elHudLaser.classList.remove('danger');
     }
     if (data.mode !== undefined) {
         currentMode = data.mode;
-        txtMode.innerText = currentMode.toUpperCase();
+        const modeStr = currentMode.toUpperCase();
+
+        // Sync Both
+        txtHudMode.innerText = modeStr;
+        txtPanelMode.innerText = modeStr;
 
         // Update Auto Toggle Button Text
-        const btnAuto = document.getElementById('btn-toggle-auto');
         if (currentMode === 'manual') {
             btnAuto.innerText = "Enable Auto Mode";
             btnAuto.classList.remove('active');
