@@ -1,0 +1,21 @@
+{
+    "pins": {
+        "pan": 27,
+        "tilt": 17
+    },
+    "pwm_hz": 50,
+    "duty": {
+        "min": 2.5,
+        "max": 12.5
+    },
+    "pan": {
+        "min_angle": 0,
+        "max_angle": 180,
+        "center": 90
+    },
+    "tilt": {
+        "min_angle": 0,
+        "max_angle": 180,
+        "center": 80
+    }
+}

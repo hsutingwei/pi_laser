@@ -11,18 +11,22 @@
             background: #111;
             color: white;
             font-family: 'Segoe UI', sans-serif;
-            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
         }
 
+        .container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
         #video-container {
             position: relative;
-            width: 100%;
-            max-width: 800px;
-            aspect-ratio: 4/3;
+            width: 640px;
+            height: 480px;
             background: #000;
             box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
         }
@@ -31,6 +35,17 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+
+        #video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+            /* Allow clicks */
+            cursor: crosshair;
         }
 
         .hud {
@@ -68,6 +83,70 @@
             box-shadow: 0 0 5px #f00;
         }
 
+        /* Side Panel */
+        .panel {
+            width: 280px;
+            background: #222;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+
+        h2,
+        h3 {
+            margin-top: 0;
+            color: #0f0;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        .status-value {
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: #444;
+            color: white;
+            border: 1px solid #555;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            background: #555;
+        }
+
+        .btn:active {
+            background: #666;
+        }
+
+        .btn.small {
+            display: inline-block;
+            width: 30%;
+            padding: 5px;
+            font-size: 12px;
+            margin-top: 5px;
+            margin-right: 2px;
+        }
+
+        .btn.active {
+            background: #007bff;
+            border-color: #0056b3;
+        }
+
         #controls-hint {
             position: absolute;
             bottom: 20px;
@@ -75,55 +154,83 @@
             text-align: right;
             font-size: 0.8em;
             opacity: 0.7;
-        }
-
-        .button-hint {
-            display: inline-block;
-            background: #333;
-            padding: 2px 6px;
-            border-radius: 4px;
-            border: 1px solid #555;
-            margin: 0 2px;
+            pointer-events: none;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
 
 <body>
-    <div id="video-container">
-        <img id="video-stream" src="/video_feed" alt="Video Stream">
+    <div class="container">
+        <!-- Video Feed -->
+        <div id="video-container">
+            <img id="video-stream" src="/video_feed" alt="Video Stream">
+            <canvas id="video-overlay"></canvas>
 
-        <div class="hud">
-            <div class="status-badge">
-                <div id="status-conn" class="indicator"></div>
-                <span id="txt-conn">Disconnected</span>
+            <div class="hud">
+                <div class="status-badge">
+                    <div id="status-conn" class="indicator"></div>
+                    <span id="txt-conn">Disconnected</span>
+                </div>
+                <div class="status-badge">
+                    <div id="status-laser" class="indicator"></div>
+                    <span>LASER</span>
+                </div>
+                <div class="status-badge">
+                    <span>PAN: <span id="val-pan">90</span>°</span>
+                    <span>TILT: <span id="val-tilt">80</span>°</span>
+                </div>
             </div>
-            <div class="status-badge">
-                <div id="status-laser" class="indicator"></div>
-                <span>LASER</span>
-            </div>
-            <div class="status-badge">
-                <span>MODE: </span>
-                <strong id="txt-mode" style="color: #0cf">MANUAL</strong>
-            </div>
-            <div class="status-badge">
-                <span>PAN: <span id="val-pan">90</span>°</span>
-                <span>TILT: <span id="val-tilt">80</span>°</span>
+
+            <!-- Controls Hint -->
+            <div id="controls-hint">
+                <button onclick="refreshVideoStream()"
+                    style="pointer-events: auto; padding: 5px 10px; background: rgba(0,0,0,0.6); border: 1px solid #777; color: white; border-radius: 4px; cursor: pointer; margin-bottom: 10px;">
+                    ⟳ Refresh Video
+                </button>
+                <div>L-Stick Aim</div>
+                <div>A Laser Toggle</div>
             </div>
         </div>
 
-        <div id="controls-hint">
-            <button onclick="refreshVideoStream()"
-                style="pointer-events: auto; padding: 5px 10px; background: rgba(0,0,0,0.6); border: 1px solid #777; color: white; border-radius: 4px; cursor: pointer; margin-bottom: 10px;">
-                ⟳ Refresh Video
-            </button>
-            <div><span class="button-hint">L-Stick</span> Aim</div>
-            <div><span class="button-hint">A</span> Laser Toggle</div>
-            <div><span class="button-hint">X</span> Auto Wobble</div>
+        <!-- Right Panel -->
+        <div class="panel">
+            <h2>System Status</h2>
+            <div class="status-item">
+                <span>Mode</span>
+                <span id="txt-mode" class="status-value">MANUAL</span>
+            </div>
+            <div class="status-item">
+                <span>Laser</span>
+                <span id="txt-laser-state" class="status-value">OFF</span>
+            </div>
+
+            <!-- Auto / Manual Toggle -->
+            <div class="control-group" style="margin-top: 20px; border-top: 1px solid #444; padding-top: 10px;">
+                <h3>Auto Pilot</h3>
+                <button id="btn-toggle-auto" class="btn">Enable Auto Mode</button>
+            </div>
+
+            <!-- Calibration -->
+            <div class="control-group" style="margin-top: 20px; border-top: 1px solid #444; padding-top: 10px;">
+                <h3>Calibration</h3>
+                <div style="font-size: 12px; color: #aaa; margin-bottom: 5px;">
+                    1. Fix TILT, click laser (X-Calib)<br>
+                    2. Fix PAN, click laser (Y-Calib)<br>
+                    3. Save
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <button id="btn-calib-x" class="btn small">X-Step</button>
+                    <button id="btn-calib-y" class="btn small">Y-Step</button>
+                    <button id="btn-calib-save" class="btn small" style="background: #28a745;">Save</button>
+                </div>
+                <div id="calib-status" style="margin-top:5px; color: yellow; font-size: 12px; min-height:1em;">Ready
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="static/js/controller.js?v=6"></script>
+    <script src="static/js/controller.js?v=7"></script>
 </body>
 
 </html>

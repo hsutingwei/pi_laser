@@ -2,36 +2,36 @@ const socket = io();
 
 // State
 let gamepadIndex = null;
-let laserState = false;
 let currentMode = 'manual';
+let calibMode = 'none'; // 'none', 'x_calib', 'y_calib'
 
 // DOM Elements
 const elConn = document.getElementById('status-conn');
 const txtConn = document.getElementById('txt-conn');
-const elLaser = document.getElementById('status-laser');
+const txtLaser = document.getElementById('txt-laser-state'); // Updated ID
 const txtMode = document.getElementById('txt-mode');
 const valPan = document.getElementById('val-pan');
 const valTilt = document.getElementById('val-tilt');
 const imgStream = document.getElementById('video-stream');
+const canvas = document.getElementById('video-overlay');
+const ctx = canvas.getContext('2d');
+const elCalibStatus = document.getElementById('calib-status');
 
-// --- MJPEG Reconnection Logic (iPad Fix) ---
+// --- MJPEG Reconnection Logic ---
 let streamErrors = 0;
-let lastFrameTime = Date.now();
 
 imgStream.onerror = () => {
     console.error("Video Stream Broken. Reconnecting...");
     streamErrors++;
-    // Auto-retry after 1s
     setTimeout(refreshVideoStream, 1000);
 };
 
 window.refreshVideoStream = function () {
     console.log(`[Video] Force refreshing stream...`);
-    // Hard Reset
     imgStream.src = '';
     setTimeout(() => {
         imgStream.src = `/video_feed?t=${Date.now()}`;
-    }, 50); // Fast retry
+    }, 50);
 }
 
 // --- Socket.IO Handlers ---
@@ -47,62 +47,202 @@ socket.on('disconnect', () => {
 
 socket.on('gimbal_state', (data) => {
     if (data.laser !== undefined) {
-        laserState = data.laser;
-        if (laserState) elLaser.classList.add('danger');
-        else elLaser.classList.remove('danger');
+        const isOn = data.laser;
+        txtLaser.innerText = isOn ? "ON" : "OFF";
+        txtLaser.style.color = isOn ? "#f00" : "#fff";
     }
     if (data.mode !== undefined) {
         currentMode = data.mode;
         txtMode.innerText = currentMode.toUpperCase();
+
+        // Update Auto Toggle Button Text
+        const btnAuto = document.getElementById('btn-toggle-auto');
+        if (currentMode === 'manual') {
+            btnAuto.innerText = "Enable Auto Mode";
+            btnAuto.classList.remove('active');
+        } else {
+            btnAuto.innerText = "Stop Auto Mode";
+            btnAuto.classList.add('active');
+        }
     }
     if (data.pan !== undefined) valPan.innerText = Math.round(data.pan);
     if (data.tilt !== undefined) valTilt.innerText = Math.round(data.tilt);
 });
 
-// --- Gamepad API ---
-
-window.addEventListener("gamepadconnected", (e) => {
-    console.log("Gamepad connected at index %d: %s. %d buttons, %d axes.",
-        e.gamepad.index, e.gamepad.id,
-        e.gamepad.buttons.length, e.gamepad.axes.length);
-    gamepadIndex = e.gamepad.index;
-    txtConn.innerText += " + Gamepad";
+socket.on('auto_status', (data) => {
+    // data: { state, bbox, roi, roi_radius, frame_size, ... }
+    drawOverlay(data);
 });
 
-window.addEventListener("gamepaddisconnected", (e) => {
-    console.log("Gamepad disconnected from index %d: %s",
-        e.gamepad.index, e.gamepad.id);
-    gamepadIndex = null;
+// --- Overlay Logic ---
+function drawOverlay(data) {
+    if (!data.frame_size) return;
+
+    const [fw, fh] = data.frame_size;
+
+    // Resize Canvas to match Frame Size (Backend Truth)
+    if (canvas.width !== fw || canvas.height !== fh) {
+        canvas.width = fw;
+        canvas.height = fh;
+    }
+
+    // Sync Display Size with Image Element
+    // This ensures coordinate translation is correct if we used click event on canvas
+    canvas.style.width = imgStream.clientWidth + 'px';
+    canvas.style.height = imgStream.clientHeight + 'px';
+
+    ctx.clearRect(0, 0, fw, fh);
+
+    // Draw ROI (Yellow)
+    if (data.roi) {
+        const [rx, ry] = data.roi;
+        const r = data.roi_radius || 35;
+
+        ctx.beginPath();
+        ctx.strokeStyle = 'yellow';
+        ctx.lineWidth = 2;
+        // Draw Rect logic as per Plan, but data.roi is center point from calibration
+        // Plan said "Draw ROI (Yellow Frame)" so lets draw Rect
+        ctx.rect(rx - r, ry - r, r * 2, r * 2);
+        ctx.stroke();
+
+        // Center Dot
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(rx - 2, ry - 2, 4, 4);
+    }
+
+    // Draw BBoxes (Red)
+    if (data.bboxes && data.bboxes.length > 0) {
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 2;
+        data.bboxes.forEach(bbox => {
+            const [bx, by, bw, bh] = bbox;
+            ctx.strokeRect(bx, by, bw, bh);
+        });
+    }
+}
+
+// --- Canvas Interaction (Calibration / Mock) ---
+canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+
+    // Need to send SERVER coordinates?
+    // The backend MockDetector expects CLIENT coordinates + Display Size.
+    // The backend Calibration expects SERVER coordinates?
+    // Let's look at app.py add_sample. It takes X/Y.
+    // Ideally we should be consistent.
+    // For Calibration, if we send X/Y, we should probably send SERVER coordinates if possible
+    // OR send Client coords + Display Size and let server scale.
+    // BUT `add_sample` in app.py just calls `calibration.add_sample` with X/Y. `CalibrationLogger` stores it.
+    // If we store Client Coords, the calibration will be dependent on Browser Size. BAD.
+    // WE MUST SCALE TO FRAME COORDS here or in backend.
+
+    // Let's Scale to Frame Coords HERE for Calibration
+    // frame_size is known if we received auto_status. If not, default 640x480.
+    const fw = canvas.width || 640;
+    const fh = canvas.height || 480;
+    const dw = canvas.clientWidth;  // Display width
+    const dh = canvas.clientHeight;
+
+    const scaleX = fw / dw;
+    const scaleY = fh / dh;
+
+    const frameX = clickX * scaleX;
+    const frameY = clickY * scaleY;
+
+    if (calibMode !== 'none') {
+        // Calibration Mode
+        fetch('/api/calibration/sample', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                x: frameX,
+                y: frameY,
+                type: calibMode
+            })
+        })
+            .then(r => r.json())
+            .then(d => {
+                elCalibStatus.innerText = `Sample Added [${calibMode}] P:${Math.round(d.pan)} T:${Math.round(d.tilt)}`;
+            });
+    } else {
+        // Mock Detector Trigger (Simulate Cat)
+        // Send Client Coords + Display Size as per `MockDetector` logic (which expects to do scaling itself)
+        // Wait, app.py mock_detection calls detector.set_detection(x, y, w, h, FW, FH).
+        // MockDetector uses FW/ClientW to scale.
+        // So we should send Client Coords for Mock Detection.
+
+        // Wait, if I shift-click, maybe? Or just click.
+        fetch('/api/mock_detection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                x: clickX,
+                y: clickY,
+                w: 50, h: 50,
+                display_w: dw,
+                display_h: dh
+            })
+        });
+    }
 });
 
+// --- UI Buttons ---
+document.getElementById('btn-toggle-auto').addEventListener('click', () => {
+    const newMode = (currentMode === 'manual') ? 'auto' : 'manual';
+    socket.emit('set_mode', { mode: newMode });
+});
+
+document.getElementById('btn-calib-x').addEventListener('click', () => {
+    calibMode = 'x_calib';
+    elCalibStatus.innerText = "Mode: X-Calib (Fix Tilt, Click Points)";
+    elCalibStatus.style.color = "#0cf";
+});
+
+document.getElementById('btn-calib-y').addEventListener('click', () => {
+    calibMode = 'y_calib';
+    elCalibStatus.innerText = "Mode: Y-Calib (Fix Pan, Click Points)";
+    elCalibStatus.style.color = "#0cf";
+});
+
+document.getElementById('btn-calib-save').addEventListener('click', () => {
+    calibMode = 'none';
+    fetch('/api/calibration/fit', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+            elCalibStatus.innerText = "Calibration Saved!";
+            elCalibStatus.style.color = "#0f0";
+            console.log("Calibration Result:", d);
+        });
+});
+
+// --- Gamepad / Keyboard Logic (Preserved) ---
 // Button Mappings (Standard Xbox)
 // 0: A, 1: B, 2: X, 3: Y
 // Axes: 0: LeftX, 1: LeftY
 
+window.addEventListener("gamepadconnected", (e) => {
+    gamepadIndex = e.gamepad.index;
+});
+
+window.addEventListener("gamepaddisconnected", (e) => {
+    gamepadIndex = null;
+});
+
 let lastBtnA = false;
 let lastBtnX = false;
-
-// Keyboard State
-const keys = {
-    up: false,
-    down: false,
-    left: false,
-    right: false
-};
+const keys = { up: false, down: false, left: false, right: false };
 
 window.addEventListener('keydown', (e) => {
-    console.log("Key pressed:", e.key); // Debug Log
     switch (e.key) {
         case 'ArrowUp': case 'w': case 'W': keys.up = true; break;
         case 'ArrowDown': case 's': case 'S': keys.down = true; break;
         case 'ArrowLeft': case 'a': case 'A': keys.left = true; break;
         case 'ArrowRight': case 'd': case 'D': keys.right = true; break;
-        case ' ': // Space for Laser
-            socket.emit('toggle_laser');
-            break;
-        case 'x': case 'X': // X for Wobble
-            socket.emit('toggle_wobble');
-            break;
+        case ' ': socket.emit('toggle_laser'); break;
+        // case 'x': socket.emit('toggle_wobble'); break; // Removing wobble shortcut
     }
 });
 
@@ -118,7 +258,7 @@ window.addEventListener('keyup', (e) => {
 let lastAxisEmit = 0;
 
 function updateLoop() {
-    // 1. Handle Gamepad Input
+    // 1. Handle Gamepad
     if (gamepadIndex !== null) {
         const gp = navigator.getGamepads()[gamepadIndex];
         if (gp) {
@@ -126,80 +266,57 @@ function updateLoop() {
             handleAxes(gp);
         }
     }
-
-    // 2. Handle Keyboard Input (if no gamepad input or mixed)
-    // We run this every loop to allow smooth holding of keys
+    // 2. Handle Keyboard
     handleKeyboardAxes();
-
     requestAnimationFrame(updateLoop);
 }
 
 function handleButtons(gp) {
-    // Button A: Toggle Laser
-    if (gp.buttons[0].pressed) {
-        if (!lastBtnA) {
-            socket.emit('toggle_laser');
-            lastBtnA = true;
-        }
-    } else {
+    if (gp.buttons[0].pressed && !lastBtnA) {
+        socket.emit('toggle_laser');
+        lastBtnA = true;
+    } else if (!gp.buttons[0].pressed) {
         lastBtnA = false;
     }
 
-    // Button X: Toggle Wobble
-    if (gp.buttons[2].pressed) {
-        if (!lastBtnX) {
-            socket.emit('toggle_wobble');
-            lastBtnX = true;
-        }
-    } else {
+    if (gp.buttons[2].pressed && !lastBtnX) {
+        // socket.emit('toggle_wobble'); // Disable old wobble button
+        lastBtnX = true;
+    } else if (!gp.buttons[2].pressed) {
         lastBtnX = false;
     }
 }
 
 function handleAxes(gp) {
     if (currentMode !== 'manual') return;
-
-    // Rate limiting emission to ~20ms (50Hz)
     const now = Date.now();
     if (now - lastAxisEmit < 20) return;
 
-    const pan = gp.axes[0]; // Left Stick X
-    const tilt = gp.axes[1]; // Left Stick Y
+    const pan = gp.axes[0];
+    const tilt = gp.axes[1];
 
     if (Math.abs(pan) > 0.05 || Math.abs(tilt) > 0.05) {
-        socket.emit('joystick_control', {
-            pan_axis: pan,
-            tilt_axis: tilt
-        });
+        socket.emit('joystick_control', { pan_axis: pan, tilt_axis: tilt });
         lastAxisEmit = now;
     }
 }
 
 function handleKeyboardAxes() {
     if (currentMode !== 'manual') return;
-
-    // Rate limiting
     const now = Date.now();
     if (now - lastAxisEmit < 20) return;
 
     let pan = 0;
     let tilt = 0;
-
     if (keys.left) pan -= 1;
     if (keys.right) pan += 1;
-    if (keys.up) tilt -= 1;   // Up usually means tilt up (servo angle change depends on mounting)
+    if (keys.up) tilt -= 1;
     if (keys.down) tilt += 1;
 
-    // If keyboard is active
     if (pan !== 0 || tilt !== 0) {
-        console.log("Sending Keyboard Joystick: Pan", pan, "Tilt", tilt); // Debug Log
-        socket.emit('joystick_control', {
-            pan_axis: pan,
-            tilt_axis: tilt
-        });
+        socket.emit('joystick_control', { pan_axis: pan, tilt_axis: tilt });
         lastAxisEmit = now;
     }
 }
 
-// Start loop immediately
 updateLoop();

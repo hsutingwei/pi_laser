@@ -1,0 +1,37 @@
+{
+    "modes": [
+        "manual",
+        "auto"
+    ],
+    "camera": {
+        "stream_fps_cap": 15,
+        "frame_source": "latest_frame_buffer"
+    },
+    "laser": {
+        "gpio_pin": 18,
+        "active_high": true,
+        "max_on_ms": 800
+    },
+    "calibration": {
+        "roi_radius_px": 35,
+        "method": "linear_regression_xy_split"
+    },
+    "auto_loop": {
+        "enabled": true,
+        "cooldown_sec": 1.2,
+        "retarget": {
+            "pan_jitter_deg": 10,
+            "tilt_jitter_deg": 6,
+            "min_move_deg": 2.0
+        },
+        "safety": {
+            "servo_settle_ms": 250
+        }
+    },
+    "detector": {
+        "current": "mock",
+        "mock": {
+            "ttl_ms": 500
+        }
+    }
+}
