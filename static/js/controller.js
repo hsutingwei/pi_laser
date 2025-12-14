@@ -242,7 +242,11 @@ window.addEventListener('keydown', (e) => {
         case 'ArrowLeft': case 'a': case 'A': keys.left = true; break;
         case 'ArrowRight': case 'd': case 'D': keys.right = true; break;
         case ' ': socket.emit('toggle_laser'); break;
-        // case 'x': socket.emit('toggle_wobble'); break; // Removing wobble shortcut
+        case 'x': case 'X':
+            // Toggle Mode (Manual <-> Auto)
+            const newMode = (currentMode === 'manual') ? 'auto' : 'manual';
+            socket.emit('set_mode', { mode: newMode });
+            break;
     }
 });
 
