@@ -68,13 +68,6 @@ class ServoPWM:
         
         # Calculate Duty Cycle
         # Map 0-180 to duty_min-duty_max
-        # Formula: duty = min + (angle / 180) * (max - min)
-        # Note: We assume input angle range scales to 180 reference for duty calc,
-        # or we treat angle as absolute 0-180 degrees.
-        ratio = angle / 180.0
-        duty = self.duty_min + Ratio * (self.duty_max - self.duty_min)
-        
-        # Fix for variable name case in formula above
         duty = self.duty_min + (angle / 180.0) * (self.duty_max - self.duty_min)
         
         if self.pwm is None:
