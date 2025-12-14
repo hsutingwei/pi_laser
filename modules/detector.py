@@ -1,11 +1,17 @@
 import time
 
 class BaseDetector:
-    def detect(self, frame):
-        """
-        Returns a list of bounding boxes: [x, y, w, h] (in frame coordinates)
-        """
+    def process_frame(self, frame):
+        """Run inference on frame and update internal state."""
+        pass
+
+    def get_latest_detections(self):
+        """Return latest cached detections."""
         return []
+
+    def detect(self, frame):
+        """Legacy alias: Returns latest detections (ignores frame)."""
+        return self.get_latest_detections()
 
 class MockDetector(BaseDetector):
     def __init__(self, config):
@@ -38,7 +44,11 @@ class MockDetector(BaseDetector):
         self.last_detection_time = time.time()
         print(f"[MockDetector] Set bbox at ({x}, {y}) for {self.ttl_ms}ms")
 
-    def detect(self, frame):
+    def process_frame(self, frame):
+        # Mock doesn't process frames
+        pass
+
+    def get_latest_detections(self):
         """
         Return current bbox if within TTL.
         """

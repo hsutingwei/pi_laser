@@ -43,7 +43,16 @@ laser = LaserController(factory)
 
 # Initialize Logic Modules
 calibration = CalibrationLogger('config/laser_calibration.json')
-detector = MockDetector(CONFIG) 
+
+# Select Detector
+det_type = CONFIG.get('detector', {}).get('current', 'mock')
+if det_type == 'tflite':
+    detector = TFLiteDetector(CONFIG)
+    print("Using TFLite Detector")
+else:
+    detector = MockDetector(CONFIG)
+    print("Using Mock Detector")
+
 autopilot = AutoPilot(CONFIG, servos, laser, detector, calibration)
 
 # Initialize Camera Streamer - PLACEHOLDER
@@ -243,7 +252,8 @@ if __name__ == '__main__':
     # Initialize Camera HERE (Single Instance Check)
     print("Initializing Camera Streamer...")
     try:
-        camera_streamer = CameraStreamer()
+        camera_streamer = CameraStreamer(CONFIG, detector)
+        camera_streamer.start()
     except Exception as e:
         print(f"Warning: Camera init failed: {e}")
         camera_streamer = None
@@ -255,4 +265,5 @@ if __name__ == '__main__':
     socketio.start_background_task(background_status_thread)
 
     # Listen on all interfaces
+    # use_reloader=False is critical to prevent double-init of threads
     socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False)
