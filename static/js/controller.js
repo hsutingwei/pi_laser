@@ -71,6 +71,7 @@ const keys = {
 };
 
 window.addEventListener('keydown', (e) => {
+    console.log("Key pressed:", e.key); // Debug Log
     switch (e.key) {
         case 'ArrowUp': case 'w': case 'W': keys.up = true; break;
         case 'ArrowDown': case 's': case 'S': keys.down = true; break;

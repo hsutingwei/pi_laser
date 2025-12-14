@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +17,7 @@
             align-items: center;
             height: 100vh;
         }
+
         #video-container {
             position: relative;
             width: 100%;
@@ -24,11 +26,13 @@
             background: #000;
             box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
         }
+
         #video-stream {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
+
         .hud {
             position: absolute;
             top: 20px;
@@ -36,6 +40,7 @@
             text-shadow: 1px 1px 2px black;
             pointer-events: none;
         }
+
         .status-badge {
             background: rgba(0, 0, 0, 0.6);
             padding: 5px 10px;
@@ -45,15 +50,24 @@
             align-items: center;
             gap: 8px;
         }
+
         .indicator {
             width: 10px;
             height: 10px;
             border-radius: 50%;
             background: #555;
         }
-        .indicator.active { background: #0f0; box-shadow: 0 0 5px #0f0; }
-        .indicator.danger { background: #f00; box-shadow: 0 0 5px #f00; }
-        
+
+        .indicator.active {
+            background: #0f0;
+            box-shadow: 0 0 5px #0f0;
+        }
+
+        .indicator.danger {
+            background: #f00;
+            box-shadow: 0 0 5px #f00;
+        }
+
         #controls-hint {
             position: absolute;
             bottom: 20px;
@@ -62,6 +76,7 @@
             font-size: 0.8em;
             opacity: 0.7;
         }
+
         .button-hint {
             display: inline-block;
             background: #333;
@@ -73,10 +88,11 @@
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
+
 <body>
     <div id="video-container">
         <img id="video-stream" src="/video_feed" alt="Video Stream">
-        
+
         <div class="hud">
             <div class="status-badge">
                 <div id="status-conn" class="indicator"></div>
@@ -103,6 +119,7 @@
         </div>
     </div>
 
-    <script src="static/js/controller.js"></script>
+    <script src="static/js/controller.js?v=3"></script>
 </body>
+
 </html>
