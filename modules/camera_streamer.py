@@ -25,7 +25,7 @@ class CameraStreamer:
             with PiCamera() as camera:
                 camera.resolution = (640, 480)
                 camera.rotation = 90 # Correcting to 90 based on user feedback
-                camera.framerate = 24
+                camera.framerate = 15 # Reduced from 24 to save bandwidth for iPad
                 # Warmup
                 time.sleep(2.0)
                 

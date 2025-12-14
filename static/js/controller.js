@@ -39,13 +39,16 @@ setInterval(() => {
 
 function scheduleReconnect() {
     // Basic backoff or immediate
-    const delay = Math.min(streamErrors * 1000, 10000); // Capped at 10s
+    console.log(`[Watchdog] Reconnecting video stream... (Attempt ${streamErrors})`);
+
+    // Hard Reset: Clear src to force socket close
+    imgStream.src = '';
+
     setTimeout(() => {
-        // Force browser to drop old connection by adding timestamp
+        // Force browser to open NEW connection
         imgStream.src = `/video_feed?t=${Date.now()}`;
-        lastFrameTime = Date.now(); // Prevent double trigger
-        console.log(`Reconnecting video stream... (Attempt ${streamErrors})`);
-    }, 1000);
+        lastFrameTime = Date.now(); // Reset timer
+    }, 100);
 }
 
 // --- Socket.IO Handlers ---
