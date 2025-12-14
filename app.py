@@ -151,8 +151,14 @@ def handle_joystick(data):
 
 @socketio.on('toggle_laser')
 def handle_laser_toggle():
+    # Emergency Intervention: If in Auto, Switch to Manual and OFF
     if autopilot.state != 'MANUAL':
+        print("[Emergency] Gamepad Override: Switching to MANUAL")
+        autopilot.set_mode('manual')
+        laser.off()
+        emit('gimbal_state', {'mode': 'manual', 'laser': False})
         return
+
     new_state = laser.toggle()
     emit('gimbal_state', {'laser': new_state})
 
