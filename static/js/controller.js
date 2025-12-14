@@ -62,7 +62,42 @@ window.addEventListener("gamepaddisconnected", (e) => {
 let lastBtnA = false;
 let lastBtnX = false;
 
+// Keyboard State
+const keys = {
+    up: false,
+    down: false,
+    left: false,
+    right: false
+};
+
+window.addEventListener('keydown', (e) => {
+    switch (e.key) {
+        case 'ArrowUp': case 'w': case 'W': keys.up = true; break;
+        case 'ArrowDown': case 's': case 'S': keys.down = true; break;
+        case 'ArrowLeft': case 'a': case 'A': keys.left = true; break;
+        case 'ArrowRight': case 'd': case 'D': keys.right = true; break;
+        case ' ': // Space for Laser
+            socket.emit('toggle_laser');
+            break;
+        case 'x': case 'X': // X for Wobble
+            socket.emit('toggle_wobble');
+            break;
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    switch (e.key) {
+        case 'ArrowUp': case 'w': case 'W': keys.up = false; break;
+        case 'ArrowDown': case 's': case 'S': keys.down = false; break;
+        case 'ArrowLeft': case 'a': case 'A': keys.left = false; break;
+        case 'ArrowRight': case 'd': case 'D': keys.right = false; break;
+    }
+});
+
+let lastAxisEmit = 0;
+
 function updateLoop() {
+    // 1. Handle Gamepad Input
     if (gamepadIndex !== null) {
         const gp = navigator.getGamepads()[gamepadIndex];
         if (gp) {
@@ -70,6 +105,11 @@ function updateLoop() {
             handleAxes(gp);
         }
     }
+
+    // 2. Handle Keyboard Input (if no gamepad input or mixed)
+    // We run this every loop to allow smooth holding of keys
+    handleKeyboardAxes();
+
     requestAnimationFrame(updateLoop);
 }
 
@@ -95,21 +135,42 @@ function handleButtons(gp) {
     }
 }
 
-let lastAxisEmit = 0;
-
 function handleAxes(gp) {
     if (currentMode !== 'manual') return;
 
-    // Rate limiting emission to ~20ms (50Hz) to avoid flooding socket
+    // Rate limiting emission to ~20ms (50Hz)
     const now = Date.now();
     if (now - lastAxisEmit < 20) return;
 
     const pan = gp.axes[0]; // Left Stick X
     const tilt = gp.axes[1]; // Left Stick Y
-    
-    // Deadzone check moved to backend or done here?
-    // Let's do a simple check here to save bandwidth
+
     if (Math.abs(pan) > 0.05 || Math.abs(tilt) > 0.05) {
+        socket.emit('joystick_control', {
+            pan_axis: pan,
+            tilt_axis: tilt
+        });
+        lastAxisEmit = now;
+    }
+}
+
+function handleKeyboardAxes() {
+    if (currentMode !== 'manual') return;
+
+    // Rate limiting
+    const now = Date.now();
+    if (now - lastAxisEmit < 20) return;
+
+    let pan = 0;
+    let tilt = 0;
+
+    if (keys.left) pan -= 1;
+    if (keys.right) pan += 1;
+    if (keys.up) tilt -= 1;   // Up usually means tilt up (servo angle change depends on mounting)
+    if (keys.down) tilt += 1;
+
+    // If keyboard is active
+    if (pan !== 0 || tilt !== 0) {
         socket.emit('joystick_control', {
             pan_axis: pan,
             tilt_axis: tilt
