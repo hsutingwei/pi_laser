@@ -46,7 +46,7 @@ camera_streamer = None
 # --- Routes ---
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', version=int(time.time()))
 
 @app.route('/video_feed')
 def video_feed():
