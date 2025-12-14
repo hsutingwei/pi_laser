@@ -3,6 +3,7 @@ from flask_socketio import SocketIO, emit
 from modules.servo_controller import ServoController
 from modules.laser_controller import LaserController
 from modules.wobble_engine import WobbleEngine
+from modules.camera_streamer import CameraStreamer
 from gpiozero.pins.pigpio import PiGPIOFactory
 import time
 
@@ -21,6 +22,14 @@ servos = ServoController(factory)
 laser = LaserController(factory)
 wobble = WobbleEngine(servos)
 
+# Initialize Camera Streamer
+# This starts the background capture thread immediately
+try:
+    camera_streamer = CameraStreamer()
+except Exception as e:
+    print(f"Warning: Camera init failed: {e}")
+    camera_streamer = None
+
 # State
 APP_STATE = {
     "mode": "manual", # or "auto" (wobble)
@@ -33,26 +42,21 @@ def index():
     return render_template('index.html')
 
 def gen_frames():
-    # Placeholder for Camera Streamer
-    # In a real impl, this would yield frames from camera_streamer.py
-    import cv2
-    cap = cv2.VideoCapture(0) # Default USB camera
-    if not cap.isOpened():
-        # Fallback dummy image if no cam
+    """Generator that yields MJPEG frames from the global camera_streamer"""
+    if not camera_streamer:
+        # Fallback if camera failed
         while True:
             time.sleep(1)
             yield b''
-            
+
     while True:
-        success, frame = cap.read()
-        if not success:
-            break
-        # Resize for performance 640x480
-        frame = cv2.resize(frame, (640, 480))
-        ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
-        frame_bytes = buffer.tobytes()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+        frame = camera_streamer.get_frame()
+        if frame:
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        else:
+            # Wait a bit if no frame yet
+            time.sleep(0.05)
 
 @app.route('/video_feed')
 def video_feed():
