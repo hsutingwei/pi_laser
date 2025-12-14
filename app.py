@@ -95,6 +95,9 @@ def handle_joystick(data):
     d_tilt = tilt_input * -SPEED 
     
     real_pan, real_tilt = servos.move_relative(d_pan, d_tilt)
+    
+    # Emit back for UI update
+    emit('gimbal_state', {'pan': real_pan, 'tilt': real_tilt})
 
 @socketio.on('toggle_laser')
 def handle_laser_toggle():
