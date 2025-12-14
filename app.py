@@ -44,14 +44,29 @@ laser = LaserController(factory)
 # Initialize Logic Modules
 calibration = CalibrationLogger('config/laser_calibration.json')
 
-# Select Detector
-det_type = CONFIG.get('detector', {}).get('current', 'mock')
-if det_type == 'tflite':
-    detector = TFLiteDetector(CONFIG)
-    print("Using TFLite Detector")
-else:
-    detector = MockDetector(CONFIG)
-    print("Using Mock Detector")
+def create_detector(config):
+    det_type = config.get('detector', {}).get('current', 'mock')
+    
+    if det_type == 'tflite':
+        try:
+            # Lazy Import to prevent crash if module is broken
+            from modules.detector_tflite import TFLiteDetector
+            
+            # This might raise ImportError (missing deps) or Exception (bad model path)
+            det = TFLiteDetector(config)
+            print("Using TFLite Detector")
+            return det
+            
+        except ImportError as e:
+            print(f"[Warning] TFLite dependencies missing: {e}. Falling back to MOCK.")
+        except Exception as e:
+            print(f"[Warning] Failed to initialize TFLite: {e}. Falling back to MOCK.")
+            
+    # Default Fallback
+    print("Using Mock Detector (Default or Fallback)")
+    return MockDetector(config)
+
+detector = create_detector(CONFIG)
 
 autopilot = AutoPilot(CONFIG, servos, laser, detector, calibration)
 

@@ -1,20 +1,40 @@
 import time
-import numpy as np
+import logging
+
+available = True
+missing_deps = []
+
 try:
-    # Try importing from tflite_runtime, fallback to full tensorflow if needed
+    import numpy as np
+except ImportError:
+    available = False
+    missing_deps.append('numpy')
+    np = None
+
+try:
+    from PIL import Image
+except ImportError:
+    available = False
+    missing_deps.append('Pillow')
+    Image = None
+
+try:
     import tflite_runtime.interpreter as tflite
 except ImportError:
     try:
         import tensorflow.lite as tflite
     except ImportError:
-        print("Error: standard tflite_runtime or tensorflow not found")
+        available = False
+        missing_deps.append('tflite_runtime')
         tflite = None
 
-from PIL import Image
 from .detector import BaseDetector
 
 class TFLiteDetector(BaseDetector):
     def __init__(self, config):
+        if not available:
+            raise ImportError(f"Missing dependencies for TFLiteDetector: {', '.join(missing_deps)}")
+
         self.config = config.get('detector', {}).get('tflite', {})
         self.model_path = self.config.get('model_path')
         self.labels_path = self.config.get('labels_path')
@@ -29,7 +49,7 @@ class TFLiteDetector(BaseDetector):
         
         self.latest_detections = []
         
-        if tflite and self.model_path:
+        if self.model_path:
             self.load_model()
             
     def load_model(self):
@@ -49,6 +69,7 @@ class TFLiteDetector(BaseDetector):
             print(f"[TFLite] Model loaded. Input Shape: {self.width}x{self.height}")
         except Exception as e:
             print(f"[TFLite] Error loading model: {e}")
+            raise e
 
     def load_labels(self, path):
         with open(path, 'r', encoding='utf-8') as f:

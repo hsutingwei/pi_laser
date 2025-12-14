@@ -29,7 +29,7 @@
         }
     },
     "detector": {
-        "current": "tflite",
+        "current": "mock",
         "mock": {
             "ttl_ms": 500
         },
@@ -37,7 +37,12 @@
             "model_path": "examples-camera-master/detect.tflite",
             "labels_path": "examples-camera-master/labelmap.txt",
             "threshold": 0.5,
-            "target_classes": ["cat", "person", "dog", "teddy bear"]
+            "target_classes": [
+                "cat",
+                "person",
+                "dog",
+                "teddy bear"
+            ]
         }
     }
 }
