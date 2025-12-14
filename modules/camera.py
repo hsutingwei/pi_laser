@@ -68,12 +68,64 @@ class CameraStreamer:
                 stream.truncate()
 
     def _mock_loop(self):
-        """Fallback for non-Pi environments"""
+        """Fallback for non-Pi environments or broken camera config"""
+        print("[Camera] Running in MOCK mode (Synthetic Video)")
+        
+        # Try to use PIL to generate a nice placeholder
+        try:
+            from PIL import Image, ImageDraw
+            use_pil = True
+        except ImportError:
+            use_pil = False
+            print("[Camera] PIL not found, using static placeholder")
+
+        # 1x1 Black Pixel JPEG (Minimal fallback)
+        fallback_frame = b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00\xff\xdb\x00C\x00\x03\x02\x02\x03\x02\x02\x03\x03\x03\x03\x04\x03\x03\x04\x05\x08\x05\x05\x04\x04\x05\n\x07\x07\x06\x08\x0c\n\x0c\x0c\x0b\n\x0b\x0b\r\x0e\x12\x10\r\x0e\x11\x0e\x0b\x0b\x10\x16\x10\x11\x13\x14\x15\x15\x15\x0c\x0f\x17\x18\x16\x14\x18\x12\x14\x15\x14\xff\xc0\x00\x11\x08\x00\x01\x00\x01\x03\x01\x22\x00\x02\x11\x01\x03\x11\x01\xff\xc4\x00\x15\x00\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\xff\xda\x00\x0c\x03\x01\x00\x02\x11\x03\x11\x00?\x00\xbf\x00\xff\xd9'
+
+        w, h = 640, 480
+        frame_count = 0
+
         while self.running:
-            time.sleep(1.0 / self.fps)
-            # Create a black image or noise
-            # For now, just None or dummy bytes is fine to prevent crash, 
-            # but visual debugging needs something.
-            # Let's generate a tiny valid JPEG? No, too complex.
-            # Just keep current_frame as None or static placeholder.
-            pass
+            start_time = time.time()
+            
+            if use_pil:
+                # Generate dynamic frame
+                img = Image.new('RGB', (w, h), color=(10, 10, 10))
+                d = ImageDraw.Draw(img)
+                
+                # Draw simple crosshair or bouncing box
+                cx, cy = w//2, h//2
+                d.line((cx-20, cy, cx+20, cy), fill='white')
+                d.line((cx, cy-20, cx, cy+20), fill='white')
+                
+                # Bouncing box
+                bx = (frame_count * 5) % w
+                d.rectangle([bx, h-50, bx+40, h-10], outline='red', width=2)
+                
+                # Timestamp
+                d.text((10, 10), f"NO CAMERA SIGNAL {frame_count}", fill='yellow')
+                
+                # Compress to JPEG
+                buf = io.BytesIO()
+                img.save(buf, format='JPEG', quality=50)
+                frame = buf.getvalue()
+            else:
+                frame = fallback_frame
+
+            with self.lock:
+                self.current_frame = frame
+            
+            # Feed Detector (even validation data needs to go to detector to prevent crashes)
+            if self.detector:
+                try:
+                    # Mock detector doesn't need bytes usually, but TFLite does
+                    # If TFLite is active but camera is mock, this might waste CPU
+                    # But kept for architecture consistency
+                    pass 
+                except:
+                    pass
+
+            frame_count += 1
+            elapsed = time.time() - start_time
+            sleep_time = max(0, (1.0 / self.fps) - elapsed)
+            time.sleep(sleep_time)
