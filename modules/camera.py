@@ -39,33 +39,38 @@ class CameraStreamer:
             self._mock_loop()
             return
 
-        with picamera.PiCamera() as camera:
-            camera.resolution = (640, 480)
-            camera.framerate = self.fps
-            time.sleep(2) # Warmup
-            
-            stream = io.BytesIO()
-            for _ in camera.capture_continuous(stream, 'jpeg', use_video_port=True):
-                if not self.running:
-                    break
+        try:
+            with picamera.PiCamera() as camera:
+                camera.resolution = (640, 480)
+                camera.framerate = self.fps
+                time.sleep(2) # Warmup
+                print(f"[Camera] PiCamera initialized. Res: {camera.resolution}")
                 
-                # Get bytes
-                stream.seek(0)
-                frame = stream.read()
-                
-                # Update shared frame
-                with self.lock:
-                    self.current_frame = frame
-                
-                # Run Detection
-                if self.detector:
-                    # We pass the rewinded stream bytes
+                stream = io.BytesIO()
+                for _ in camera.capture_continuous(stream, 'jpeg', use_video_port=True):
+                    if not self.running:
+                        break
+                    
+                    # Get bytes
                     stream.seek(0)
-                    self.detector.process_frame(stream)
-                
-                # Reset stream
-                stream.seek(0)
-                stream.truncate()
+                    frame = stream.read()
+                    
+                    # Update shared frame
+                    with self.lock:
+                        self.current_frame = frame
+                    
+                    # Run Detection
+                    if self.detector:
+                        # We pass the rewinded stream bytes
+                        stream.seek(0)
+                        self.detector.process_frame(stream)
+                    
+                    # Reset stream
+                    stream.seek(0)
+                    stream.truncate()
+        except Exception as e:
+            print(f"[Camera] Hardware Error: {e}. Switching to Mock Mode.")
+            self._mock_loop()
 
     def _mock_loop(self):
         """Fallback for non-Pi environments or broken camera config"""
