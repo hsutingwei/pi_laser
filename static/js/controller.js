@@ -171,6 +171,7 @@ function handleKeyboardAxes() {
 
     // If keyboard is active
     if (pan !== 0 || tilt !== 0) {
+        console.log("Sending Keyboard Joystick: Pan", pan, "Tilt", tilt); // Debug Log
         socket.emit('joystick_control', {
             pan_axis: pan,
             tilt_axis: tilt

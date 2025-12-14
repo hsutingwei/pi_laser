@@ -75,7 +75,9 @@ def handle_connect():
 
 @socketio.on('joystick_control')
 def handle_joystick(data):
+    print(f"[DEBUG] Joystick Event Received: {data}") # Debug Log
     if APP_STATE['mode'] != 'manual':
+        print(f"[DEBUG] Ignored: Mode is {APP_STATE['mode']}")
         return # Ignore joystick in auto mode
 
     # Data: {'pan': float (-1~1), 'tilt': float (-1~1)}
