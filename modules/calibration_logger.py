@@ -66,7 +66,11 @@ class CalibrationLogger:
     def fit(self):
         """Compute linear regression for X and Y axes independently"""
         # Fit X: x = ax * pan + bx
-        if len(self.samples_x) >= 2:
+        if len(self.samples_x) == 1:
+            # Single point (FPV mode) -> Constant X
+            self.params['ax'] = 0.0
+            self.params['bx'] = float(self.samples_x[0]['x'])
+        elif len(self.samples_x) >= 2:
             pans = np.array([s['pan'] for s in self.samples_x])
             xs = np.array([s['x'] for s in self.samples_x])
             # Linear Fit (degree 1)
@@ -75,14 +79,19 @@ class CalibrationLogger:
             self.params['bx'] = float(bx)
         
         # Fit Y: y = ay * tilt + by
-        if len(self.samples_y) >= 2:
+        if len(self.samples_y) == 1:
+             # Single point (FPV mode) -> Constant Y
+            self.params['ay'] = 0.0
+            self.params['by'] = float(self.samples_y[0]['y'])
+        elif len(self.samples_y) >= 2:
             tilts = np.array([s['tilt'] for s in self.samples_y])
             ys = np.array([s['y'] for s in self.samples_y])
             ay, by = np.polyfit(tilts, ys, 1)
             self.params['ay'] = float(ay)
             self.params['by'] = float(by)
             
-        if len(self.samples_x) >= 2 and len(self.samples_y) >= 2:
+        # Check if we have enough data (at least 1 point per axis)
+        if len(self.samples_x) >= 1 and len(self.samples_y) >= 1:
             self.calibrated = True
             
         self.save()
