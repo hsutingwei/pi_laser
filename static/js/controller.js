@@ -21,34 +21,17 @@ let lastFrameTime = Date.now();
 imgStream.onerror = () => {
     console.error("Video Stream Broken. Reconnecting...");
     streamErrors++;
-    scheduleReconnect();
+    // Auto-retry after 1s
+    setTimeout(refreshVideoStream, 1000);
 };
 
-imgStream.onload = () => {
-    lastFrameTime = Date.now();
-    // Reset connection class if needed
-};
-
-// Watchdog: Check if frame hasn't updated in 5 seconds
-setInterval(() => {
-    if (Date.now() - lastFrameTime > 5000) {
-        console.warn("Video Stalled (5s). Force reconnecting...");
-        scheduleReconnect();
-    }
-}, 2000);
-
-function scheduleReconnect() {
-    // Basic backoff or immediate
-    console.log(`[Watchdog] Reconnecting video stream... (Attempt ${streamErrors})`);
-
-    // Hard Reset: Clear src to force socket close
+window.refreshVideoStream = function () {
+    console.log(`[Video] Force refreshing stream...`);
+    // Hard Reset
     imgStream.src = '';
-
     setTimeout(() => {
-        // Force browser to open NEW connection
         imgStream.src = `/video_feed?t=${Date.now()}`;
-        lastFrameTime = Date.now(); // Reset timer
-    }, 100);
+    }, 50); // Fast retry
 }
 
 // --- Socket.IO Handlers ---
