@@ -94,7 +94,7 @@ def handle_joystick(data):
     SPEED = 2.0 
     
     d_pan = pan_input * SPEED
-    d_tilt = tilt_input * -SPEED 
+    d_tilt = tilt_input * SPEED # Inverted from previous setting (-SPEED -> SPEED) 
     
     real_pan, real_tilt = servos.move_relative(d_pan, d_tilt)
     
