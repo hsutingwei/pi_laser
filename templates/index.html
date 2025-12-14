@@ -9,51 +9,54 @@
         body {
             margin: 0;
             background: #111;
-            color: white;
+            color: #eee;
             font-family: 'Segoe UI', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             height: 100vh;
             width: 100vw;
             overflow: hidden;
-            /* Prevent body scroll if content fits */
         }
 
         .container {
             display: flex;
-            flex-wrap: wrap;
-            /* Stack on mobile */
-            gap: 2vmin;
-            width: 95vw;
-            max-width: 1200px;
-            height: 90vh;
-            /* Occupy viewport height */
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Left Side: Video Stage */
+        #main-stage {
+            flex: 1;
+            background: #000;
+            display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
         }
 
         #video-container {
             position: relative;
-            /* Responsive Width/Height maintaining 4:3 */
-            flex: 1 1 60%;
-            min-width: 320px;
-            max-width: 800px;
-            /* Don't get too absurdly huge */
+            /* Core Logic: Maximize Size while keeping Ratio */
             aspect-ratio: 4/3;
-            background: #000;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
-            border-radius: 8px;
-            overflow: hidden;
-            margin: auto;
-            /* Center in flex item */
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+
+            /* Tricks to make it fit within parent flex without overflowing */
+            /* If parent is wide: height=100%, width=auto (limited by ratio) */
+            /* If parent is tall: width=100%, height=auto (limited by ratio) */
+            /* Actually, setting BOTH width/height to auto + max values + aspect-ratio works best in modern browsers */
+            width: auto;
+            height: auto;
+
+            box-shadow: 0 0 50px rgba(0, 255, 0, 0.1);
         }
 
         #video-stream {
             width: 100%;
             height: 100%;
             object-fit: contain;
-            /* Ensure full video is seen */
+            display: block;
         }
 
         #video-overlay {
@@ -62,33 +65,63 @@
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: auto;
             cursor: crosshair;
         }
 
         .hud {
             position: absolute;
-            top: 2vmin;
-            left: 2vmin;
-            text-shadow: 1px 1px 2px black;
+            top: 10px;
+            left: 10px;
             pointer-events: none;
-            font-size: clamp(12px, 2vmin, 18px);
-            /* Responsive font */
+            font-size: 14px;
         }
 
+        /* Right Side: Control Panel */
+        .panel {
+            width: 300px;
+            min-width: 250px;
+            background: #1a1a1a;
+            border-left: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .panel {
+                width: 100%;
+                height: 40%;
+                border-left: none;
+                border-top: 1px solid #333;
+            }
+
+            #main-stage {
+                height: 60%;
+            }
+        }
+
+        /* UI Elements */
         .status-badge {
             background: rgba(0, 0, 0, 0.6);
-            padding: 0.5em 1em;
+            padding: 4px 8px;
             border-radius: 4px;
-            margin-bottom: 0.5em;
+            margin-bottom: 4px;
             display: flex;
             align-items: center;
-            gap: 0.5em;
+            gap: 6px;
         }
 
         .indicator {
-            width: 0.8em;
-            height: 0.8em;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             background: #555;
         }
@@ -103,85 +136,83 @@
             box-shadow: 0 0 5px #f00;
         }
 
-        /* Side Panel */
-        .panel {
-            flex: 0 1 300px;
-            /* Fixed width basis, but shrinkable/growable */
-            min-width: 250px;
-            background: #222;
-            padding: 2vmin;
-            border-radius: 8px;
-            border: 1px solid #444;
-            display: flex;
-            flex-direction: column;
-            gap: 1em;
-            max-height: 90vh;
-            overflow-y: auto;
-            /* Scroll if panel is too tall */
-        }
-
         h2,
         h3 {
-            margin: 0;
+            margin: 0 0 15px 0;
             color: #0f0;
-            font-size: clamp(1.2rem, 2.5vmin, 1.5rem);
         }
 
         .status-item {
             display: flex;
             justify-content: space-between;
             border-bottom: 1px solid #333;
-            padding-bottom: 5px;
-            font-size: clamp(0.9rem, 2vmin, 1.1rem);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
         }
 
         .status-value {
             font-family: monospace;
             font-weight: bold;
+            font-size: 1.1em;
         }
+
+        .control-group {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+        }
+
+        /* Push controls to bottom or just space them out? Let's use margin-top on the first control group to separate status from controls */
 
         .btn {
             display: block;
             width: 100%;
-            padding: 10px;
-            background: #444;
+            padding: 12px;
+            background: #333;
             color: white;
-            border: 1px solid #555;
+            border: 1px solid #444;
             cursor: pointer;
             border-radius: 4px;
-            font-size: 1rem;
+            font-size: 16px;
             transition: 0.2s;
+            margin-top: 10px;
         }
 
         .btn:hover {
-            background: #555;
+            background: #444;
+            border-color: #666;
         }
 
         .btn:active {
-            background: #666;
+            background: #555;
+            transform: translateY(1px);
         }
 
         .btn.small {
             display: inline-block;
-            width: 30%;
-            padding: 5px;
-            font-size: 0.8rem;
-            margin-right: 2px;
-        }
-
-        .btn.active {
-            background: #007bff;
-            border-color: #0056b3;
+            width: 32%;
+            padding: 8px 4px;
+            font-size: 13px;
+            margin: 5px 1% 0 0;
         }
 
         #controls-hint {
             position: absolute;
-            bottom: 2vmin;
-            right: 2vmin;
+            bottom: 10px;
+            right: 10px;
             text-align: right;
-            font-size: clamp(10px, 1.5vmin, 14px);
-            opacity: 0.7;
+            font-size: 12px;
+            opacity: 0.6;
             pointer-events: none;
+        }
+
+        /* Version Stamp (Corner) */
+        .version {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            font-size: 10px;
+            color: #444;
         }
     </style>
     <script src="static/js/socket.io.min.js"></script>
@@ -189,38 +220,40 @@
 
 <body>
     <div class="container">
-        <!-- Video Feed -->
-        <div id="video-container">
-            <img id="video-stream" src="/video_feed" alt="Video Stream">
-            <canvas id="video-overlay"></canvas>
+        <!-- Main Stage (Video) -->
+        <div id="main-stage">
+            <div id="video-container">
+                <img id="video-stream" src="/video_feed" alt="Video Stream">
+                <canvas id="video-overlay"></canvas>
 
-            <div class="hud">
-                <div class="status-badge">
-                    <div id="status-conn" class="indicator"></div>
-                    <span id="txt-conn">Disconnected</span>
+                <div class="hud">
+                    <div class="status-badge">
+                        <div id="status-conn" class="indicator"></div>
+                        <span id="txt-conn">Disconnected</span>
+                    </div>
+                    <div class="status-badge">
+                        <div id="status-laser" class="indicator"></div>
+                        <span>LASER</span>
+                    </div>
+                    <div class="status-badge">
+                        <span>MODE: </span>
+                        <strong id="txt-mode" style="color: #0cf">MANUAL</strong>
+                    </div>
+                    <div class="status-badge">
+                        <span>PAN: <span id="val-pan">90</span>°</span>
+                        <span>TILT: <span id="val-tilt">80</span>°</span>
+                    </div>
                 </div>
-                <div class="status-badge">
-                    <div id="status-laser" class="indicator"></div>
-                    <span>LASER</span>
-                </div>
-                <div class="status-badge">
-                    <span>MODE: </span>
-                    <strong id="txt-mode" style="color: #0cf">MANUAL</strong>
-                </div>
-                <div class="status-badge">
-                    <span>PAN: <span id="val-pan">90</span>°</span>
-                    <span>TILT: <span id="val-tilt">80</span>°</span>
-                </div>
-            </div>
 
-            <!-- Controls Hint -->
-            <div id="controls-hint">
-                <button onclick="refreshVideoStream()"
-                    style="pointer-events: auto; padding: 5px 10px; background: rgba(0,0,0,0.6); border: 1px solid #777; color: white; border-radius: 4px; cursor: pointer; margin-bottom: 10px;">
-                    ⟳ Refresh Video
-                </button>
-                <div>L-Stick Aim</div>
-                <div>A Laser Toggle</div>
+                <!-- Controls Hint -->
+                <div id="controls-hint">
+                    <button onclick="refreshVideoStream()"
+                        style="pointer-events: auto; padding: 5px 10px; background: rgba(0,0,0,0.6); border: 1px solid #777; color: white; border-radius: 4px; cursor: pointer; margin-bottom: 10px;">
+                        ⟳ Refresh Video
+                    </button>
+                    <div>L-Stick Aim</div>
+                    <div>A Laser Toggle</div>
+                </div>
             </div>
         </div>
 
@@ -237,13 +270,13 @@
             </div>
 
             <!-- Auto / Manual Toggle -->
-            <div class="control-group" style="margin-top: 20px; border-top: 1px solid #444; padding-top: 10px;">
+            <div class="control-group" style="margin-top: auto;">
                 <h3>Auto Pilot</h3>
                 <button id="btn-toggle-auto" class="btn">Enable Auto Mode</button>
             </div>
 
             <!-- Calibration -->
-            <div class="control-group" style="margin-top: 20px; border-top: 1px solid #444; padding-top: 10px;">
+            <div class="control-group">
                 <h3>Calibration</h3>
                 <div style="font-size: 12px; color: #aaa; margin-bottom: 5px;">
                     1. Fix TILT, click laser (X-Calib)<br>
@@ -258,6 +291,8 @@
                 <div id="calib-status" style="margin-top:5px; color: yellow; font-size: 12px; min-height:1em;">Ready
                 </div>
             </div>
+
+            <div class="version">v{{ version }}</div>
         </div>
     </div>
 
