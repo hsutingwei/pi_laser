@@ -3,7 +3,7 @@ from flask_socketio import SocketIO, emit
 from modules.servo_controller import ServoController
 from modules.laser_controller import LaserController
 # from modules.wobble_engine import WobbleEngine # Deprecated
-from modules.camera_streamer import CameraStreamer
+from modules.camera import CameraStreamer
 from modules.calibration_logger import CalibrationLogger
 from modules.detector import MockDetector
 from modules.auto_pilot import AutoPilot
