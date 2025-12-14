@@ -22,13 +22,9 @@ servos = ServoController(factory)
 laser = LaserController(factory)
 wobble = WobbleEngine(servos)
 
-# Initialize Camera Streamer
-# This starts the background capture thread immediately
-try:
-    camera_streamer = CameraStreamer()
-except Exception as e:
-    print(f"Warning: Camera init failed: {e}")
-    camera_streamer = None
+# Initialize Camera Streamer - PLACEHOLDER
+# Actual initialization happens in __main__ to avoid double-open by reloader
+camera_streamer = None
 
 # State
 APP_STATE = {
@@ -43,8 +39,9 @@ def index():
 
 def gen_frames():
     """Generator that yields MJPEG frames from the global camera_streamer"""
+    global camera_streamer
     if not camera_streamer:
-        # Fallback if camera failed
+        # Fallback if camera failed or not initialized
         while True:
             time.sleep(1)
             yield b''
@@ -82,12 +79,7 @@ def handle_joystick(data):
         return # Ignore joystick in auto mode
 
     # Data: {'pan': float (-1~1), 'tilt': float (-1~1)}
-    # Convert joystick -1~1 to speed or direct angle mapping?
-    # Usually direct mapping is absolute positioning, or rate control.
-    # User JSON implies control. Let's do Rate Control (Joystick holding left moves left)
-    # OR Absolute Mapping?
-    # "Controls: pan: Left joystick X-axis". Usually for camera gimbal, Absolute or Rate?
-    # Let's try RATE control for smooth aiming. Joystick push = velocity.
+    # Rate Control
     
     pan_input = data.get('pan_axis', 0.0)
     tilt_input = data.get('tilt_axis', 0.0)
@@ -100,12 +92,9 @@ def handle_joystick(data):
     SPEED = 2.0 
     
     d_pan = pan_input * SPEED
-    d_tilt = tilt_input * -SPEED # Y-axis usually inverted (Up is -1 in HTML Gamepad usually, check JS)
+    d_tilt = tilt_input * -SPEED 
     
     real_pan, real_tilt = servos.move_relative(d_pan, d_tilt)
-    
-    # Emit back for UI update (optimize: don't emit every tick if high freq)
-    # emit('gimbal_state_update', {'pan': real_pan, 'tilt': real_tilt}, broadcast=False)
 
 @socketio.on('toggle_laser')
 def handle_laser_toggle():
@@ -135,5 +124,14 @@ def handle_set_mode(data):
     emit('gimbal_state', {'mode': APP_STATE['mode']})
 
 if __name__ == '__main__':
+    # Initialize Camera HERE (Single Instance Check)
+    print("Initializing Camera Streamer...")
+    try:
+        camera_streamer = CameraStreamer()
+    except Exception as e:
+        print(f"Warning: Camera init failed: {e}")
+        camera_streamer = None
+
     # Listen on all interfaces
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    # CRITICAL: debug=False, use_reloader=False to prevent ENOSPC (double cam init)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False)
