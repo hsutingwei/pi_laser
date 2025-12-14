@@ -9,13 +9,13 @@
         "max": 12.5
     },
     "pan": {
-        "min_angle": 30,
-        "max_angle": 150,
+        "min_angle": 0,
+        "max_angle": 180,
         "center": 90
     },
     "tilt": {
-        "min_angle": 40,
-        "max_angle": 120,
+        "min_angle": 0,
+        "max_angle": 180,
         "center": 80
     }
 }

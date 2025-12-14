@@ -11,11 +11,11 @@ PIN_TILT = 17
 MIN_PULSE = 0.5/1000
 MAX_PULSE = 2.5/1000
 
-# Angle Limits from JSON
-PAN_MIN_ANGLE = 30
-PAN_MAX_ANGLE = 150
-TILT_MIN_ANGLE = 40
-TILT_MAX_ANGLE = 120
+# Angle Limits from JSON (Calibrated)
+PAN_MIN_ANGLE = 0
+PAN_MAX_ANGLE = 180
+TILT_MIN_ANGLE = 0
+TILT_MAX_ANGLE = 180
 
 class ServoController:
     def __init__(self, factory=None):
@@ -40,7 +40,7 @@ class ServoController:
         
         # Move to center initially
         self.set_pan(90)
-        self.set_tilt(80) # Center of 40-120
+        self.set_tilt(80) # Calibrated Center
 
     def _map_angle_to_value(self, angle):
         """Maps 0-180 degree to -1 to 1 value for gpiozero"""
