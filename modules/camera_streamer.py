@@ -24,7 +24,7 @@ class CameraStreamer:
         try:
             with PiCamera() as camera:
                 camera.resolution = (640, 480)
-                camera.rotation = 270 # Rotate 90 degrees (Adjust to 90/270 based on mount)
+                camera.rotation = 90 # Correcting to 90 based on user feedback
                 camera.framerate = 24
                 # Warmup
                 time.sleep(2.0)
