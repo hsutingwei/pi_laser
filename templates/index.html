@@ -15,26 +15,45 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            /* Prevent body scroll if content fits */
         }
 
         .container {
             display: flex;
-            gap: 20px;
+            flex-wrap: wrap;
+            /* Stack on mobile */
+            gap: 2vmin;
+            width: 95vw;
+            max-width: 1200px;
+            height: 90vh;
+            /* Occupy viewport height */
+            justify-content: center;
             align-items: flex-start;
         }
 
         #video-container {
             position: relative;
-            width: 640px;
-            height: 480px;
+            /* Responsive Width/Height maintaining 4:3 */
+            flex: 1 1 60%;
+            min-width: 320px;
+            max-width: 800px;
+            /* Don't get too absurdly huge */
+            aspect-ratio: 4/3;
             background: #000;
             box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: auto;
+            /* Center in flex item */
         }
 
         #video-stream {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+            /* Ensure full video is seen */
         }
 
         #video-overlay {
@@ -44,31 +63,32 @@
             width: 100%;
             height: 100%;
             pointer-events: auto;
-            /* Allow clicks */
             cursor: crosshair;
         }
 
         .hud {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 2vmin;
+            left: 2vmin;
             text-shadow: 1px 1px 2px black;
             pointer-events: none;
+            font-size: clamp(12px, 2vmin, 18px);
+            /* Responsive font */
         }
 
         .status-badge {
             background: rgba(0, 0, 0, 0.6);
-            padding: 5px 10px;
+            padding: 0.5em 1em;
             border-radius: 4px;
-            margin-bottom: 5px;
+            margin-bottom: 0.5em;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 0.5em;
         }
 
         .indicator {
-            width: 10px;
-            height: 10px;
+            width: 0.8em;
+            height: 0.8em;
             border-radius: 50%;
             background: #555;
         }
@@ -85,25 +105,34 @@
 
         /* Side Panel */
         .panel {
-            width: 280px;
+            flex: 0 1 300px;
+            /* Fixed width basis, but shrinkable/growable */
+            min-width: 250px;
             background: #222;
-            padding: 20px;
+            padding: 2vmin;
             border-radius: 8px;
             border: 1px solid #444;
+            display: flex;
+            flex-direction: column;
+            gap: 1em;
+            max-height: 90vh;
+            overflow-y: auto;
+            /* Scroll if panel is too tall */
         }
 
         h2,
         h3 {
-            margin-top: 0;
+            margin: 0;
             color: #0f0;
+            font-size: clamp(1.2rem, 2.5vmin, 1.5rem);
         }
 
         .status-item {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
             border-bottom: 1px solid #333;
             padding-bottom: 5px;
+            font-size: clamp(0.9rem, 2vmin, 1.1rem);
         }
 
         .status-value {
@@ -115,13 +144,12 @@
             display: block;
             width: 100%;
             padding: 10px;
-            margin-top: 10px;
             background: #444;
             color: white;
             border: 1px solid #555;
             cursor: pointer;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 1rem;
             transition: 0.2s;
         }
 
@@ -137,8 +165,7 @@
             display: inline-block;
             width: 30%;
             padding: 5px;
-            font-size: 12px;
-            margin-top: 5px;
+            font-size: 0.8rem;
             margin-right: 2px;
         }
 
@@ -149,10 +176,10 @@
 
         #controls-hint {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
+            bottom: 2vmin;
+            right: 2vmin;
             text-align: right;
-            font-size: 0.8em;
+            font-size: clamp(10px, 1.5vmin, 14px);
             opacity: 0.7;
             pointer-events: none;
         }
