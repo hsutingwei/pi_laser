@@ -12,6 +12,41 @@ const elLaser = document.getElementById('status-laser');
 const txtMode = document.getElementById('txt-mode');
 const valPan = document.getElementById('val-pan');
 const valTilt = document.getElementById('val-tilt');
+const imgStream = document.getElementById('video-stream');
+
+// --- MJPEG Reconnection Logic (iPad Fix) ---
+let streamErrors = 0;
+let lastFrameTime = Date.now();
+
+imgStream.onerror = () => {
+    console.error("Video Stream Broken. Reconnecting...");
+    streamErrors++;
+    scheduleReconnect();
+};
+
+imgStream.onload = () => {
+    lastFrameTime = Date.now();
+    // Reset connection class if needed
+};
+
+// Watchdog: Check if frame hasn't updated in 5 seconds
+setInterval(() => {
+    if (Date.now() - lastFrameTime > 5000) {
+        console.warn("Video Stalled (5s). Force reconnecting...");
+        scheduleReconnect();
+    }
+}, 2000);
+
+function scheduleReconnect() {
+    // Basic backoff or immediate
+    const delay = Math.min(streamErrors * 1000, 10000); // Capped at 10s
+    setTimeout(() => {
+        // Force browser to drop old connection by adding timestamp
+        imgStream.src = `/video_feed?t=${Date.now()}`;
+        lastFrameTime = Date.now(); // Prevent double trigger
+        console.log(`Reconnecting video stream... (Attempt ${streamErrors})`);
+    }, 1000);
+}
 
 // --- Socket.IO Handlers ---
 socket.on('connect', () => {

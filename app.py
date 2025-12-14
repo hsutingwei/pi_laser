@@ -37,27 +37,32 @@ APP_STATE = {
 def index():
     return render_template('index.html')
 
-def gen_frames():
-    """Generator that yields MJPEG frames from the global camera_streamer"""
-    global camera_streamer
-    if not camera_streamer:
-        # Fallback if camera failed or not initialized
-        while True:
-            time.sleep(1)
-            yield b''
-
-    while True:
-        frame = camera_streamer.get_frame()
-        if frame:
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-        else:
-            # Wait a bit if no frame yet
-            time.sleep(0.05)
-
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    client_ip = request.remote_addr
+    user_agent = request.headers.get('User-Agent')
+    print(f"[Video Feed] Client connected: {client_ip} ({user_agent})")
+    
+    def stream_generator():
+        try:
+            if not camera_streamer:
+                while True:
+                    time.sleep(1)
+                    yield b''
+            
+            while True:
+                frame = camera_streamer.get_frame()
+                if frame:
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                else:
+                    time.sleep(0.05)
+        except GeneratorExit:
+            print(f"[Video Feed] Client disconnected: {client_ip}")
+        except Exception as e:
+            print(f"[Video Feed] Error: {e}")
+
+    return Response(stream_generator(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 # --- WebSocket Events ---
 
