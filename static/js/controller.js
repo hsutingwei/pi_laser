@@ -46,7 +46,6 @@ window.addEventListener("gamepadconnected", (e) => {
         e.gamepad.buttons.length, e.gamepad.axes.length);
     gamepadIndex = e.gamepad.index;
     txtConn.innerText += " + Gamepad";
-    requestAnimationFrame(updateLoop);
 });
 
 window.addEventListener("gamepaddisconnected", (e) => {
@@ -180,3 +179,6 @@ function handleKeyboardAxes() {
         lastAxisEmit = now;
     }
 }
+
+// Start loop immediately
+updateLoop();
