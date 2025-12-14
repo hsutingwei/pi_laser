@@ -69,7 +69,7 @@ socket.on('gimbal_state', (data) => {
         else if (elHudLaser) elHudLaser.classList.remove('danger');
     }
     if (data.mode !== undefined) {
-        currentMode = data.mode;
+        currentMode = data.mode.toLowerCase();
         const modeStr = currentMode.toUpperCase();
 
         // Sync Both
