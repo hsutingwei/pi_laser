@@ -33,11 +33,8 @@ except:
     factory = None
 
 servos = ServoController(factory)
-# Apply saved limits
-s_conf = CONFIG.get('servos', {})
-p_lim = s_conf.get('pan_limits_deg')
-t_lim = s_conf.get('tilt_limits_deg')
-servos.set_limits(p_lim, t_lim)
+# Hardware Limits are always full range (0-180) to allow manual setup
+servos.set_limits([0, 180], [0, 180])
 
 laser = LaserController(factory)
 
@@ -139,7 +136,7 @@ def set_limits():
     if axis == 'pan': current_val = servos.current_pan
     elif axis == 'tilt': current_val = servos.current_tilt
     
-    # Update Config Object
+    # Update Config Object (Memory Only - Waiting for Save)
     if 'servos' not in CONFIG: CONFIG['servos'] = {}
     
     # Get current or create default
@@ -154,29 +151,33 @@ def set_limits():
     if lim_type == 'min': limits[0] = current_val
     elif lim_type == 'max': limits[1] = current_val
     
-    # Apply to Hardware Immediately
-    p_lim = CONFIG['servos'].get('pan_limits_deg')
-    t_lim = CONFIG['servos'].get('tilt_limits_deg')
-    servos.set_limits(p_lim, t_lim)
-    
-    # Make sure AutoPilot knows too (since it has its own copy of limits usually)
-    # Actually AutoPilot reads self.servos... no, it reads 'config' dict in init.
-    # We should update AutoPilot config reference if possible, or restart it.
-    # For now, let's just update the specific attributes if they exist
+    # Update AutoPilot (so it respects new limits immediately)
     if autopilot:
-        autopilot.pan_limits = p_lim if p_lim else [0, 180]
-        autopilot.tilt_limits = t_lim if t_lim else [0, 180]
+        p_lim = CONFIG['servos'].get('pan_limits_deg', [0, 180])
+        t_lim = CONFIG['servos'].get('tilt_limits_deg', [0, 180])
+        autopilot.pan_limits = p_lim
+        autopilot.tilt_limits = t_lim
 
-    # Save Config to Disk
+    print(f"[Limits] Updated {axis} {lim_type} to {current_val} (Pending Save)")
+    return jsonify({"status": "ok", "limits": limits, "val": current_val})
+
+@app.route('/api/config/save', methods=['POST'])
+def save_config_all():
+    """Saves both Config (Limits) and Calibration"""
     try:
+        # Save Config
         with open(CONFIG_PATH, 'w') as f:
             json.dump(CONFIG, f, indent=4)
-        print(f"[Limits] Saved new {axis} {lim_type} limit: {current_val}")
+        print("[Config] Saved to disk")
+        
+        # Save Calibration
+        calibration.save()
+        print("[Calibration] Saved to disk")
+        
+        return jsonify({"status": "ok"})
     except Exception as e:
-        print(f"[Limits] Error saving config: {e}")
+        print(f"[Save] Error: {e}")
         return jsonify({"status": "error", "msg": str(e)}), 500
-
-    return jsonify({"status": "ok", "limits": limits, "val": current_val})
 
 @app.route('/api/mock_detection', methods=['POST'])
 def mock_detection():

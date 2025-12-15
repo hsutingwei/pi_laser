@@ -227,59 +227,16 @@ document.getElementById('btn-calib-y').addEventListener('click', () => {
     elCalibStatus.style.color = "#0cf";
 });
 
-document.getElementById('btn-calib-save').addEventListener('click', () => {
-    calibMode = 'none';
-    fetch('/api/calibration/fit', { method: 'POST' })
-        .then(r => r.json())
-        .then(d => {
-            elCalibStatus.innerText = "Calibration Saved!";
-            elCalibStatus.style.color = "#0f0";
-            console.log("Calibration Result:", d);
-        });
-});
+// --- Safety Limits & Master Save ---
+const badgeUnsaved = document.getElementById('badge-unsaved');
+const valLimits = document.getElementById('lbl-limits');
+const msgSave = document.getElementById('save-msg');
 
-// --- Gamepad / Keyboard Logic (Preserved) ---
-// Button Mappings (Standard Xbox)
-// 0: A, 1: B, 2: X, 3: Y
-// Axes: 0: LeftX, 1: LeftY
+function setStatusUnsaved() {
+    badgeUnsaved.style.display = 'inline-block';
+    msgSave.innerText = '';
+}
 
-window.addEventListener("gamepadconnected", (e) => {
-    gamepadIndex = e.gamepad.index;
-});
-
-window.addEventListener("gamepaddisconnected", (e) => {
-    gamepadIndex = null;
-});
-
-let lastBtnA = false;
-let lastBtnX = false;
-const keys = { up: false, down: false, left: false, right: false };
-
-window.addEventListener('keydown', (e) => {
-    switch (e.key) {
-        case 'ArrowUp': case 'w': case 'W': keys.up = true; break;
-        case 'ArrowDown': case 's': case 'S': keys.down = true; break;
-        case 'ArrowLeft': case 'a': case 'A': keys.left = true; break;
-        case 'ArrowRight': case 'd': case 'D': keys.right = true; break;
-        case ' ': socket.emit('toggle_laser'); break;
-        case 'x': case 'X':
-            // Toggle Mode (Manual <-> Auto)
-            const newMode = (currentMode === 'manual') ? 'auto' : 'manual';
-            socket.emit('set_mode', { mode: newMode });
-            break;
-    }
-});
-
-window.addEventListener('keyup', (e) => {
-    switch (e.key) {
-        case 'ArrowUp': case 'w': case 'W': keys.up = false; break;
-        case 'ArrowDown': case 's': case 'S': keys.down = false; break;
-        case 'ArrowLeft': case 'a': case 'A': keys.left = false; break;
-        case 'ArrowRight': case 'd': case 'D': keys.right = false; break;
-    }
-});
-
-// --- Safety Limits ---
 document.getElementById('btn-lim-tilt-min').addEventListener('click', () => {
     setLimit('tilt', 'min');
 });
@@ -296,12 +253,36 @@ function setLimit(axis, type) {
         .then(r => r.json())
         .then(data => {
             if (data.status === 'ok') {
-                alert(`Limit Set! ${axis} ${type} = ${data.val}`);
+                const [min, max] = data.limits;
+                valLimits.innerText = `${Math.round(min)}° ~ ${Math.round(max)}°`;
+                setStatusUnsaved();
             } else {
                 alert('Error: ' + data.msg);
             }
         });
 }
+
+document.getElementById('btn-save-all').addEventListener('click', () => {
+    // 1. Commit Calibration (Fit) if pending
+    fetch('/api/calibration/fit', { method: 'POST' })
+        .then(r => r.json())
+        .then(() => {
+            // 2. Commit Config (Limits)
+            return fetch('/api/config/save', { method: 'POST' });
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.status === 'ok') {
+                badgeUnsaved.style.display = 'none';
+                msgSave.innerText = 'All Settings Saved!';
+                calibMode = 'none';
+                elCalibStatus.innerText = "System Ready";
+                elCalibStatus.style.color = "#0f0";
+            } else {
+                alert("Save Failed: " + d.msg);
+            }
+        });
+});
 
 // --- Main Control Loop ---
 let lastAxisEmit = 0;
