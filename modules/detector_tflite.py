@@ -63,6 +63,7 @@ class TFLiteDetector(BaseDetector):
         self.width = 300
         
         self.latest_detections = []
+        self.frame_count = 0
         
         # Initialize
         self._load_interpreter_safe()
@@ -149,7 +150,12 @@ class TFLiteDetector(BaseDetector):
         Run inference. Throttled.
         frame_bytes: bytes or io.BytesIO
         """
-        if not self.interpreter: return
+        if not self.interpreter:
+            return
+
+        self.frame_count += 1
+        if self.frame_count % 30 == 0:
+            print(f"[TFLite] Heartbeat: Frame {self.frame_count} | Last Detections: {len(self.latest_detections)}")
 
         # Throttling
         now = time.time()
