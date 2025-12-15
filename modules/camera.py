@@ -129,12 +129,9 @@ class CameraStreamer:
             # Feed Detector (even validation data needs to go to detector to prevent crashes)
             if self.detector:
                 try:
-                    # Mock detector doesn't need bytes usually, but TFLite does
-                    # If TFLite is active but camera is mock, this might waste CPU
-                    # But kept for architecture consistency
-                    pass 
-                except:
-                    pass
+                    self.detector.process_frame(frame)
+                except Exception as e:
+                    print(f"[Camera] Mock Detect Error: {e}")
 
             frame_count += 1
             elapsed = time.time() - start_time
