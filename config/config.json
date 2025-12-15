@@ -3,6 +3,16 @@
         "manual",
         "auto"
     ],
+    "servos": {
+        "pan_limits_deg": [
+            20,
+            160
+        ],
+        "tilt_limits_deg": [
+            20,
+            140
+        ]
+    },
     "camera": {
         "stream_fps_cap": 15,
         "frame_source": "latest_frame_buffer",
