@@ -284,6 +284,50 @@ document.getElementById('btn-save-all').addEventListener('click', () => {
         });
 });
 
+// --- Gamepad / Keyboard Events (Restored) ---
+window.addEventListener("gamepadconnected", (e) => {
+    gamepadIndex = e.gamepad.index;
+    console.log("Gamepad connected:", e.gamepad.id);
+});
+
+window.addEventListener("gamepaddisconnected", (e) => {
+    gamepadIndex = null;
+    console.log("Gamepad disconnected");
+});
+
+let lastBtnA = false;
+let lastBtnX = false;
+const keys = { up: false, down: false, left: false, right: false };
+
+window.addEventListener('keydown', (e) => {
+    // Prevent default scrolling for arrow keys
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.code) > -1) {
+        e.preventDefault();
+    }
+
+    switch (e.key) {
+        case 'ArrowUp': case 'w': case 'W': keys.up = true; break;
+        case 'ArrowDown': case 's': case 'S': keys.down = true; break;
+        case 'ArrowLeft': case 'a': case 'A': keys.left = true; break;
+        case 'ArrowRight': case 'd': case 'D': keys.right = true; break;
+        case ' ': socket.emit('toggle_laser'); break;
+        case 'x': case 'X':
+            // Toggle Mode
+            const newMode = (currentMode === 'manual') ? 'auto' : 'manual';
+            socket.emit('set_mode', { mode: newMode });
+            break;
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    switch (e.key) {
+        case 'ArrowUp': case 'w': case 'W': keys.up = false; break;
+        case 'ArrowDown': case 's': case 'S': keys.down = false; break;
+        case 'ArrowLeft': case 'a': case 'A': keys.left = false; break;
+        case 'ArrowRight': case 'd': case 'D': keys.right = false; break;
+    }
+});
+
 // --- Main Control Loop ---
 let lastAxisEmit = 0;
 
