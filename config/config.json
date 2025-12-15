@@ -40,14 +40,19 @@
         }
     },
     "detector": {
-        "current": "mock",
+        "current": "tflite",
         "mock": {
             "ttl_ms": 500
         },
         "tflite": {
+            "backend": "tpu",
+            "fallback_backend": "cpu",
             "model_path": "examples-camera-master/detect.tflite",
+            "model_path_tpu": "examples-camera-master/detect_edgetpu.tflite",
+            "edgetpu_delegate": "libedgetpu.so.1",
             "labels_path": "examples-camera-master/labelmap.txt",
             "threshold": 0.5,
+            "inference_fps": 10,
             "target_classes": [
                 "cat",
                 "person",

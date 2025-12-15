@@ -1,5 +1,6 @@
 import time
 import logging
+import platform
 
 available = True
 missing_deps = []
@@ -36,11 +37,24 @@ class TFLiteDetector(BaseDetector):
             raise ImportError(f"Missing dependencies for TFLiteDetector: {', '.join(missing_deps)}")
 
         self.config = config.get('detector', {}).get('tflite', {})
-        self.model_path = self.config.get('model_path')
         self.labels_path = self.config.get('labels_path')
         self.threshold = self.config.get('threshold', 0.5)
-        self.labels = {}
         
+        # Paths
+        self.model_path_cpu = self.config.get('model_path')
+        self.model_path_tpu = self.config.get('model_path_tpu')
+        self.delegate_path = self.config.get('edgetpu_delegate', 'libedgetpu.so.1')
+        
+        # Backend Config
+        self.backend = self.config.get('backend', 'cpu') # 'cpu' or 'tpu'
+        self.fallback = self.config.get('fallback_backend', 'cpu')
+        
+        # Throttling
+        self.inference_fps = self.config.get('inference_fps', 10)
+        self.min_interval = 1.0 / self.inference_fps
+        self.last_inference_time = 0
+        
+        self.labels = {}
         self.interpreter = None
         self.input_details = None
         self.output_details = None
@@ -49,29 +63,74 @@ class TFLiteDetector(BaseDetector):
         
         self.latest_detections = []
         
-        if self.model_path:
-            self.load_model()
+        # Initialize
+        self._load_interpreter()
             
-    def load_model(self):
+    def _load_interpreter(self):
+        # 1. Try Loading Labels
         try:
-            print(f"[TFLite] Loading model: {self.model_path}")
             self.labels = self.load_labels(self.labels_path)
-            
-            self.interpreter = tflite.Interpreter(model_path=self.model_path)
-            self.interpreter.allocate_tensors()
-            
-            self.input_details = self.interpreter.get_input_details()
-            self.output_details = self.interpreter.get_output_details()
-            
-            self.height = self.input_details[0]['shape'][1]
-            self.width = self.input_details[0]['shape'][2]
-            
-            print(f"[TFLite] Model loaded. Input Shape: {self.width}x{self.height}")
         except Exception as e:
-            print(f"[TFLite] Error loading model: {e}")
+            print(f"[TFLite] Error loading labels: {e}")
             raise e
 
+        # 2. Try Loading Model (TPU First if requested)
+        if self.backend == 'tpu':
+            try:
+                self._load_tpu_model()
+                print(f"[TFLite] Initialized TPU Backend using {self.model_path_tpu}")
+                return
+            except Exception as e:
+                print(f"[TFLite] TPU init failed: {e}. Checking fallback...")
+                if self.fallback == 'cpu':
+                    self.backend = 'cpu'
+                    print("[TFLite] Falling back to CPU backend")
+                elif self.fallback == 'mock':
+                    raise Exception("TPU failed and fallback is mock")
+                else:
+                    raise e # No fallback defined or unknown
+        
+        # 3. Load CPU Model (If requested or fell back)
+        if self.backend == 'cpu':
+            try:
+                self._load_cpu_model()
+                print(f"[TFLite] Initialized CPU Backend using {self.model_path_cpu}")
+            except Exception as e:
+                print(f"[TFLite] CPU init failed: {e}")
+                raise e
+
+    def _load_tpu_model(self):
+        if not self.model_path_tpu:
+            raise ValueError("model_path_tpu not defined in config")
+        
+        print(f"[TFLite] Loading TPU Delegate: {self.delegate_path}")
+        try:
+            delegate = tflite.load_delegate(self.delegate_path)
+            self.interpreter = tflite.Interpreter(
+                model_path=self.model_path_tpu,
+                experimental_delegates=[delegate]
+            )
+            self._allocate()
+        except Exception as e:
+            # Re-raise to trigger fallback
+            raise e
+
+    def _load_cpu_model(self):
+        if not self.model_path_cpu:
+            raise ValueError("model_path (CPU) not defined in config")
+        
+        self.interpreter = tflite.Interpreter(model_path=self.model_path_cpu)
+        self._allocate()
+        
+    def _allocate(self):
+        self.interpreter.allocate_tensors()
+        self.input_details = self.interpreter.get_input_details()
+        self.output_details = self.interpreter.get_output_details()
+        self.height = self.input_details[0]['shape'][1]
+        self.width = self.input_details[0]['shape'][2]
+
     def load_labels(self, path):
+        if not path: return {}
         with open(path, 'r', encoding='utf-8') as f:
             return {i: line.strip() for i, line in enumerate(f.readlines())}
 
@@ -80,43 +139,45 @@ class TFLiteDetector(BaseDetector):
 
     def process_frame(self, frame_bytes):
         """
-        Run inference on a single frame (JPEG bytes or PIL Image).
-        Updates self.latest_detections.
+        Run inference on a single frame. Throttled by FPS limit.
         """
         if not self.interpreter:
             return
 
+        # Throttling
+        now = time.time()
+        if now - self.last_inference_time < self.min_interval:
+            return # Skip frame
+        self.last_inference_time = now
+
         try:
-            # Preprocess Image
-            img = Image.open(frame_bytes)
-            img_resized = img.resize((self.width, self.height))
+            # Preprocess
+            image = Image.open(frame_bytes)
+            img_resized = image.resize((self.width, self.height))
             input_data = np.expand_dims(img_resized, axis=0)
 
-            # Floating point models require normalization? MobileNet V1 Quant is uint8 usually.
-            # Let's check dtype.
+            # Normalize if Float model
             if self.input_details[0]['dtype'] == np.float32:
                 input_data = (np.float32(input_data) - 127.5) / 127.5
             
+            # Inference
             self.interpreter.set_tensor(self.input_details[0]['index'], input_data)
             self.interpreter.invoke()
 
-            # Retrieve Results
+            # Results
             boxes = self.interpreter.get_tensor(self.output_details[0]['index'])[0]
             classes = self.interpreter.get_tensor(self.output_details[1]['index'])[0]
             scores = self.interpreter.get_tensor(self.output_details[2]['index'])[0]
             
             detections = []
+            orig_w, orig_h = image.size
             
-            # Map back to original frame size
-            orig_w, orig_h = img.size
-            
-            target_classes = self.config.get('target_classes', ['cat', 'person', 'dog'])
+            target_classes = self.config.get('target_classes', [])
 
             for i in range(len(scores)):
                 if scores[i] >= self.threshold:
                     ymin, xmin, ymax, xmax = boxes[i]
                     
-                    # Convert [0,1] to pixels
                     left = int(xmin * orig_w)
                     top = int(ymin * orig_h)
                     right = int(xmax * orig_w)
@@ -125,10 +186,6 @@ class TFLiteDetector(BaseDetector):
                     class_id = int(classes[i])
                     label = self.labels.get(class_id, "unknown")
                     
-                    # Filter target classes
-                    # Note: We rely on exact string match used in config vs labels file
-                    # Commonly: 'person', 'cat', 'dog'
-                    # If target_classes is defined, filter. If empty, allow all.
                     if target_classes and label not in target_classes:
                         continue
                     
@@ -145,4 +202,8 @@ class TFLiteDetector(BaseDetector):
                     
         except Exception as e:
             print(f"[TFLite] Inference Error: {e}")
+            # Don't clear detections on error, just keep old ones?
+            # Or clear to indicate failure?
+            # Usually keep old is safer to prevent flickering, but might be stuck.
+            # Lets clear to be safe.
             self.latest_detections = []
