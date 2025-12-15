@@ -18,12 +18,28 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # Load Config
 CONFIG_PATH = 'config/config.json'
+HARDWARE_CONFIG_PATH = 'config/hardware.json'
+
 try:
     with open(CONFIG_PATH, 'r') as f:
         CONFIG = json.load(f)
 except Exception as e:
     print(f"Error loading config: {e}. Using defaults.")
     CONFIG = {}
+
+# Overlay Hardware Config (Git-ignored local overrides)
+if os.path.exists(HARDWARE_CONFIG_PATH):
+    try:
+        with open(HARDWARE_CONFIG_PATH, 'r') as f:
+            hw_conf = json.load(f)
+            # Deep merge servos config
+            if 'servos' not in CONFIG: CONFIG['servos'] = {}
+            if 'servos' in hw_conf:
+                for k, v in hw_conf['servos'].items():
+                    CONFIG['servos'][k] = v
+            print(f"Loaded Hardware Config from {HARDWARE_CONFIG_PATH}")
+    except Exception as e:
+        print(f"Error loading hardware config: {e}")
 
 # Initialize Hardware
 try:
@@ -33,8 +49,17 @@ except:
     factory = None
 
 servos = ServoController(factory)
-# Hardware Limits are always full range (0-180) to allow manual setup
-servos.set_limits([0, 180], [0, 180])
+
+# Apply Limits from Config (including hardware overrides)
+p_lim = CONFIG.get('servos', {}).get('pan_limits_deg', [0, 180])
+t_lim = CONFIG.get('servos', {}).get('tilt_limits_deg', [0, 180])
+servos.set_limits(p_lim, t_lim)
+
+# Apply Center if defined
+center = CONFIG.get('servos', {}).get('center_deg')
+if center:
+    servos.set_pan(center[0])
+    servos.set_tilt(center[1])
 
 laser = LaserController(factory)
 
@@ -165,16 +190,64 @@ def set_limits():
     print(f"[Limits] Updated {axis} {lim_type} to {current_val} (Pending Save)")
     return jsonify({"status": "ok", "limits": limits, "val": current_val})
 
+@app.route('/api/center/set', methods=['POST'])
+def set_center():
+    """
+    Sets the current Pan/Tilt as the Mechanical Center.
+    """
+    pan = servos.current_pan
+    tilt = servos.current_tilt
+    
+    if 'servos' not in CONFIG: CONFIG['servos'] = {}
+    CONFIG['servos']['center_deg'] = [pan, tilt]
+    
+    # Apply immediately (re-center based on new center? No, Center is just a reference point usually)
+    # But user might expect "Home" to be this.
+    
+    print(f"[Center] Updated Center to P:{pan}, T:{tilt} (Pending Save)")
+    return jsonify({"status": "ok", "center": [pan, tilt]})
+
+def save_hardware_config():
+    hw_keys = ['pan_limits_deg', 'tilt_limits_deg', 'center_deg']
+    hw_data = {'servos': {}}
+    
+    servos_conf = CONFIG.get('servos', {})
+    for k in hw_keys:
+        if k in servos_conf:
+            hw_data['servos'][k] = servos_conf[k]
+            
+    with open(HARDWARE_CONFIG_PATH, 'w') as f:
+        json.dump(hw_data, f, indent=4)
+        
+    return hw_data
+
 @app.route('/api/config/save', methods=['POST'])
 def save_config_all():
-    """Saves both Config (Limits) and Calibration"""
+    """Saves Config (splitting Hardware vs Main) and Calibration"""
     try:
-        # Save Config
-        with open(CONFIG_PATH, 'w') as f:
-            json.dump(CONFIG, f, indent=4)
-        print("[Config] Saved to disk")
+        # 1. Save Hardware Config
+        hw_data = save_hardware_config()
+        print("[Config] Hardware Settings saved to hardware.json")
         
-        # Save Calibration
+        # 2. Save Main Config (Exclude Hardware Keys to avoid Git pollution)
+        # We assume CONFIG has everything. We want to save everything EXCEPT hw keys to config.json
+        # But wait, CONFIG structure might be complex. 
+        # Deep copy is safest.
+        import copy
+        main_conf = copy.deepcopy(CONFIG)
+        
+        # Remove hardware keys from main config copy
+        hw_keys = ['pan_limits_deg', 'tilt_limits_deg', 'center_deg']
+        if 'servos' in main_conf:
+            for k in hw_keys:
+                if k in main_conf['servos']:
+                    del main_conf['servos'][k]
+                    
+        with open(CONFIG_PATH, 'w') as f:
+            json.dump(main_conf, f, indent=4)
+        print("[Config] Main Settings saved to config.json (Hardware keys excluded)")
+        
+        # 3. Save Calibration
         calibration.save()
         print("[Calibration] Saved to disk")
         

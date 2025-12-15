@@ -295,20 +295,35 @@
                 </div>
 
                 <div style="margin-bottom: 15px;">
-                    <strong style="color: #ccc; font-size: 14px;">2. Safety Limits (Auto)</strong>
+                    <strong style="color: #ccc; font-size: 14px;">2. Hardware Limits (Auto)</strong>
                     <div style="font-size: 12px; color: #888; margin-bottom: 5px;">
-                        Move to Limit, then Click Set.
+                        Set Physical Bounds for Safety.
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
-                        <span style="font-size:12px; color:#aaa;">Values: <span id="lbl-limits"
+                        <span style="font-size:12px; color:#aaa;">Status: <span id="lbl-limits"
                                 style="color:#0f0;">Checking...</span></span>
                         <span id="badge-unsaved"
                             style="font-size:10px; background:#e00; padding:2px 4px; border-radius:3px; display:none;">UNSAVED</span>
                     </div>
-                    <div style="display:flex; justify-content:space-between; gap:5px;">
-                        <button id="btn-lim-tilt-min" class="btn small" style="width:48%">Set Top</button>
-                        <button id="btn-lim-tilt-max" class="btn small" style="width:48%">Set Bot</button>
+
+                    <!-- Pan Limits -->
+                    <div style="margin-bottom: 5px; font-size: 12px; color:#aaa;">Pan Limits</div>
+                    <div style="display:flex; justify-content:space-between; gap:5px; margin-bottom: 8px;">
+                        <button id="btn-lim-pan-min" class="btn small" style="width:48%">Set Right (Min)</button>
+                        <button id="btn-lim-pan-max" class="btn small" style="width:48%">Set Left (Max)</button>
                     </div>
+
+                    <!-- Tilt Limits -->
+                    <div style="margin-bottom: 5px; font-size: 12px; color:#aaa;">Tilt Limits</div>
+                    <div style="display:flex; justify-content:space-between; gap:5px; margin-bottom: 8px;">
+                        <button id="btn-lim-tilt-min" class="btn small" style="width:48%">Set Top (Min)</button>
+                        <button id="btn-lim-tilt-max" class="btn small" style="width:48%">Set Bot (Max)</button>
+                    </div>
+
+                    <!-- Center -->
+                    <button id="btn-set-center" class="btn" style="margin-top: 5px; padding: 8px;">Set Mechanical
+                        Center</button>
+                    <div id="center-msg" style="font-size:10px; color:#0cf; text-align:center;"></div>
                 </div>
 
                 <button id="btn-save-all" class="btn" style="background: #28a745; margin-top: 15px;">SAVE ALL

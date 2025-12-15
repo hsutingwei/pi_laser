@@ -260,6 +260,24 @@ document.getElementById('btn-lim-tilt-min').addEventListener('click', () => {
 document.getElementById('btn-lim-tilt-max').addEventListener('click', () => {
     setLimit('tilt', 'max');
 });
+document.getElementById('btn-lim-pan-min').addEventListener('click', () => {
+    setLimit('pan', 'min');
+});
+document.getElementById('btn-lim-pan-max').addEventListener('click', () => {
+    setLimit('pan', 'max');
+});
+
+document.getElementById('btn-set-center').addEventListener('click', () => {
+    fetch('/api/center/set', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+            if (d.status === 'ok') {
+                document.getElementById('center-msg').innerText =
+                    `Center Set: P${Math.round(d.center[0])} T${Math.round(d.center[1])}`;
+                setStatusUnsaved();
+            }
+        });
+});
 
 function setLimit(axis, type) {
     fetch('/api/limits/set', {
@@ -271,7 +289,8 @@ function setLimit(axis, type) {
         .then(data => {
             if (data.status === 'ok') {
                 const [min, max] = data.limits;
-                valLimits.innerText = `${Math.round(min)}° ~ ${Math.round(max)}°`;
+                // Simple feedback, maybe specific to axis
+                valLimits.innerText = `${axis.toUpperCase()}: ${Math.round(min)}° ~ ${Math.round(max)}°`;
                 setStatusUnsaved();
             } else {
                 alert('Error: ' + data.msg);
