@@ -54,27 +54,42 @@ socket.on('disconnect', () => {
 });
 
 socket.on('gimbal_state', (data) => {
+    updateUIState(data);
+});
+
+socket.on('auto_status', (data) => {
+    // data: { state, bbox, roi, roi_radius, frame_size, laser, pan, tilt ... }
+    updateUIState(data);
+    drawOverlay(data);
+});
+
+function updateUIState(data) {
+    // 1. Laser
     if (data.laser !== undefined) {
         const isOn = data.laser;
-        // Panel Text
         txtPanelLaser.innerText = isOn ? "ON" : "OFF";
         txtPanelLaser.style.color = isOn ? "#f00" : "#fff";
-        // HUD Dot
-        if (isOn && elHudLaser) elHudLaser.classList.add('active'); // active=green? wait, laser is red usually.
-        else if (elHudLaser) elHudLaser.classList.remove('active');
 
-        // Wait, index.html CSS says .indicator.danger { background: #f00 }
-        // Let's use 'danger' class for laser
-        if (isOn && elHudLaser) elHudLaser.classList.add('danger');
-        else if (elHudLaser) elHudLaser.classList.remove('danger');
+        if (isOn && elHudLaser) {
+            elHudLaser.classList.add('active');
+            elHudLaser.classList.add('danger');
+        } else if (elHudLaser) {
+            elHudLaser.classList.remove('active');
+            elHudLaser.classList.remove('danger');
+        }
     }
-    if (data.mode !== undefined) {
-        currentMode = data.mode.toLowerCase();
-        const modeStr = currentMode.toUpperCase();
 
-        // Sync Both
-        txtHudMode.innerText = modeStr;
-        txtPanelMode.innerText = modeStr;
+    // 2. Mode (Handle 'mode' from Manual, 'state' from Auto)
+    let m = data.mode || data.state;
+    if (m !== undefined) {
+        // AutoPilot state can be 'AUTO_READY', 'AUTO_COOLDOWN' -> treat as 'AUTO'
+        // But for UI display, we might want to show sub-state?
+        // Let's normalize for the Mode Toggle Button logic
+        currentMode = (m.toLowerCase().includes('auto')) ? 'auto' : 'manual';
+
+        const modeDisplay = m.toUpperCase().replace('_', ' ');
+        txtHudMode.innerText = modeDisplay;
+        txtPanelMode.innerText = modeDisplay;
 
         // Update Auto Toggle Button Text
         if (currentMode === 'manual') {
@@ -85,14 +100,11 @@ socket.on('gimbal_state', (data) => {
             btnAuto.classList.add('active');
         }
     }
+
+    // 3. Pan / Tilt
     if (data.pan !== undefined) valPan.innerText = Math.round(data.pan);
     if (data.tilt !== undefined) valTilt.innerText = Math.round(data.tilt);
-});
-
-socket.on('auto_status', (data) => {
-    // data: { state, bbox, roi, roi_radius, frame_size, ... }
-    drawOverlay(data);
-});
+}
 
 // --- Overlay Logic ---
 function drawOverlay(data) {
