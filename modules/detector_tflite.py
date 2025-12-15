@@ -170,15 +170,16 @@ class TFLiteDetector(BaseDetector):
             else:
                 stream = frame_bytes # Assume file-like
             
-            image = Image.open(stream)
-            img_resized = image.resize((self.width, self.height))
-            input_data = np.expand_dims(img_resized, axis=0)
+            image = Image.open(stream).convert('RGB')
+            img_resized = image.resize((self.width, self.height), Image.BILINEAR)
+            
+            # Prepare Input Tensor
+            input_dtype = self.input_details[0]['dtype']
+            input_data = np.expand_dims(np.array(img_resized, dtype=input_dtype), axis=0)
 
-            # Normalize (assuming Float model needs -1..1 or 0..1 depending on meta? 
-            # Usually MobileNet is 0-255 uint8 or -1..1 float.
-            # Config doesn't specify mean/std. Assuming simple -1..1 for float, 0..255 for Quantized.
-            if self.input_details[0]['dtype'] == np.float32:
-                input_data = (np.float32(input_data) - 127.5) / 127.5
+            # Normalize if Float model (Standard MobileNet: -1..1)
+            if input_dtype == np.float32:
+                input_data = (input_data - 127.5) / 127.5
             
             self.interpreter.set_tensor(self.input_details[0]['index'], input_data)
             self.interpreter.invoke()

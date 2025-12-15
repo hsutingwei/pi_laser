@@ -20,7 +20,30 @@ class MockDetector(BaseDetector):
         self.last_detection_time = 0
         self.frame_count = 0
 
-    # ... set_detection ...
+    def set_detection(self, client_x, client_y, client_w, client_h, frame_w, frame_h):
+        """
+        Receive a simulated detection from frontend (click).
+        Convert client coordinates to frame coordinates.
+        """
+        if client_w <= 0 or client_h <= 0:
+            return 
+
+        scale_x = frame_w / client_w
+        scale_y = frame_h / client_h
+        
+        # Center the bbox on the click
+        bbox_w = int(50 * scale_x) # Arbitrary mock size (e.g. 50px simulated cat)
+        bbox_h = int(50 * scale_y)
+        
+        center_x = int(client_x * scale_x)
+        center_y = int(client_y * scale_y)
+        
+        x = max(0, center_x - bbox_w // 2)
+        y = max(0, center_y - bbox_h // 2)
+        
+        self.current_bbox = [x, y, bbox_w, bbox_h]
+        self.last_detection_time = time.time()
+        print(f"[MockDetector] Set bbox at ({x}, {y}) for {self.ttl_ms}ms")
 
     def process_frame(self, frame):
         self.frame_count += 1
