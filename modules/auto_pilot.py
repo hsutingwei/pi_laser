@@ -110,10 +110,10 @@ class AutoPilot:
                         roi_center = self.calibration.predict(pan, tilt)
                         
                         if roi_center:
-                            # Get Detections (Mock or Real)
-                            # Note: detector.detect() creates new bboxes based on logic
-                            # For MockDetector, it returns bbox if valid
-                            bboxes = self.detector.detect(None)
+                            # Get Detections
+                            bboxes = self.detector.get_latest_detections()
+                            # Sort by score (Highest confidence first)
+                            bboxes.sort(key=lambda x: x.get('score', 0), reverse=True)
                             
                             for det in bboxes:
                                 bbox = det.get('bbox')
@@ -194,7 +194,7 @@ class AutoPilot:
              roi = self.calibration.predict(self.servos.current_pan, self.servos.current_tilt)
              
         # Detector BBox (For viz)
-        bboxes = self.detector.detect(None)
+        bboxes = self.detector.get_latest_detections()
         
         return {
             "state": self.state,

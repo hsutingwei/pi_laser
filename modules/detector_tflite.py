@@ -108,7 +108,7 @@ class TFLiteDetector(BaseDetector):
 
     def _load_tpu_model(self):
         if not self.model_path_tpu:
-            raise ValueError("model_path_tpu not defined")
+             raise ValueError("model_path_tpu not defined")
         
         logger.info(f"Loading TPU Delegate: {self.delegate_path}")
         delegate = tflite.load_delegate(self.delegate_path)
@@ -130,6 +130,7 @@ class TFLiteDetector(BaseDetector):
         self.output_details = self.interpreter.get_output_details()
         self.height = self.input_details[0]['shape'][1]
         self.width = self.input_details[0]['shape'][2]
+        self.manual_detections = [] # Init storage
 
     def load_labels(self, path):
         if not path: return {}
@@ -139,9 +140,36 @@ class TFLiteDetector(BaseDetector):
         except Exception as e:
             logger.error(f"Label load error: {e}")
             return {}
+            
+    def set_detection(self, x, y, w, h, fw, fh):
+        """Inject a manual detection for testing."""
+        x1 = max(0, int(x - w / 2))
+        y1 = max(0, int(y - h / 2))
+        x2 = min(fw, int(x + w / 2))
+        y2 = min(fh, int(y + h / 2))
+        
+        self.manual_detections = [{
+            "bbox": [x1, y1, x2, y2],
+            "label": "manual",
+            "score": 1.0,
+            "ts": time.time()
+        }]
+        logger.info("Manual Detection Injected")
 
     def get_latest_detections(self):
-        return self.latest_detections
+        # Merge inference and manual
+        res = list(self.latest_detections)
+        
+        # Add manual if valid (TTL 1s)
+        if self.manual_detections:
+            valid = []
+            for d in self.manual_detections:
+                if time.time() - d['ts'] < 1.0:
+                    valid.append(d)
+            self.manual_detections = valid
+            res.extend(valid)
+            
+        return res
 
     def process_frame(self, frame_bytes):
         if not self.interpreter: return
@@ -183,7 +211,7 @@ class TFLiteDetector(BaseDetector):
             
             detections = []
             orig_w, orig_h = image.size
-            target_classes = self.config.get('target_classes', [])
+            target_classes = [t.lower() for t in self.config.get('target_classes', [])]
 
             for i in range(len(scores)):
                 score = float(scores[i])
@@ -199,7 +227,7 @@ class TFLiteDetector(BaseDetector):
                     class_id = int(classes[i])
                     label = self.labels.get(class_id, "unknown")
                     
-                    if target_classes and label not in target_classes:
+                    if target_classes and label.lower() not in target_classes:
                         continue
                     
                     detections.append({

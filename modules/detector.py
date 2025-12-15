@@ -69,8 +69,23 @@ class MockDetector(BaseDetector):
         # Mock doesn't process frames
         pass
 
+import os
+
 def create_detector(config):
-    method = config.get('detector', {}).get('current', 'mock')
+    det_config = config.get('detector', {})
+    method = det_config.get('current') 
+    
+    # Auto-detect if not specified
+    if not method:
+        # Check if tflite model exists
+        model_path = det_config.get('tflite', {}).get('model_path')
+        if model_path and os.path.exists(model_path):
+             logger.info(f"Auto-selecting TFLite (Model found: {model_path})")
+             method = 'tflite'
+        else:
+             logger.info("Auto-selecting Mock (No TFLite config/model found)")
+             method = 'mock'
+    
     logger.info(f"Factory: Creating detector for mode '{method}'")
     
     if method == 'tflite':
