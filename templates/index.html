@@ -284,13 +284,16 @@
                 <div style="margin-bottom: 15px;">
                     <strong style="color: #ccc; font-size: 14px;">1. Calibration</strong>
                     <div style="font-size: 12px; color: #888; margin-bottom: 5px;">
-                        Center Laser, then Click Set.
+                        Aim Laser -> Click Add. (Need 3+ points)
                     </div>
-                    <div style="display:flex; justify-content:space-between;">
-                        <button id="btn-calib-x" class="btn small">Set Center X</button>
-                        <button id="btn-calib-y" class="btn small">Set Center Y</button>
+                    <div style="display:flex; justify-content:space-between; gap:5px;">
+                        <button id="btn-calib-add" class="btn small"
+                            style="width:68%; background:#007bff; border-color:#0056b3;">Add Point</button>
+                        <button id="btn-calib-reset" class="btn small"
+                            style="width:30%; background:#dc3545; border-color:#bd2130;">Reset</button>
                     </div>
                     <div id="calib-status" style="font-size:12px; color:#ffff00; margin-top:5px; min-height:15px;">
+                        Samples: 0
                     </div>
                 </div>
 

@@ -151,6 +151,12 @@ def fit_calibration():
         print(f"[Calibration] Fit failed: {res.get('msg')}")
     return jsonify(res)
 
+@app.route('/api/calibration/clear', methods=['POST'])
+def clear_calibration():
+    calibration.clear()
+    print("[Calibration] Cleared all samples.")
+    return jsonify({"status": "ok"})
+
 @app.route('/api/limits/set', methods=['POST'])
 def set_limits():
     """

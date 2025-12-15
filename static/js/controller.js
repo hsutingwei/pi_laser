@@ -202,7 +202,10 @@ canvas.addEventListener('click', (e) => {
         })
             .then(r => r.json())
             .then(d => {
-                elCalibStatus.innerText = `Sample Added [${calibMode}] P:${Math.round(d.pan)} T:${Math.round(d.tilt)}`;
+                sampleCount++;
+                elCalibStatus.innerText = `Sample Added! Total: ${sampleCount}. (Aim -> Click Add again)`;
+                elCalibStatus.style.color = "#0f0";
+                calibMode = 'none'; // Auto-disarm for safety
             });
     } else {
         // Mock Detector Trigger (Simulate Cat)
@@ -232,17 +235,47 @@ document.getElementById('btn-toggle-auto').addEventListener('click', () => {
     socket.emit('set_mode', { mode: newMode });
 });
 
-document.getElementById('btn-calib-x').addEventListener('click', () => {
-    calibMode = 'x_calib';
-    elCalibStatus.innerText = "Mode: X-Calib (Fix Tilt, Click Points)";
+// Calibration State
+let sampleCount = 0;
+
+document.getElementById('btn-calib-add').addEventListener('click', () => {
+    calibMode = 'general';
+    elCalibStatus.innerText = ">> CLICK ON LASER DOT IN VIDEO <<";
     elCalibStatus.style.color = "#0cf";
 });
 
-document.getElementById('btn-calib-y').addEventListener('click', () => {
-    calibMode = 'y_calib';
-    elCalibStatus.innerText = "Mode: Y-Calib (Fix Pan, Click Points)";
-    elCalibStatus.style.color = "#0cf";
+document.getElementById('btn-calib-reset').addEventListener('click', () => {
+    if (!confirm("Clear all calibration points?")) return;
+
+    fetch('/api/calibration/clear', { method: 'POST' })
+        .then(r => r.json())
+        .then(() => {
+            sampleCount = 0;
+            elCalibStatus.innerText = "Samples: 0";
+            elCalibStatus.style.color = "#ffff00";
+            calibMode = 'none';
+        });
 });
+
+// Update Canvas Click to handle 'general' and update count
+// ... (Logic is inside canvas.click, checking calibMode) ...
+// We need to modify the canvas.click Handler in this file too? 
+// The instruction above said "Rewrite calibration button handlers". 
+// But I also need to update the canvas click response to increment count and reset mode.
+
+// Let's modify the canvas click handler separately/here if it is within range?
+// It was around line 163. The snippet target here is 235-245 (Buttons).
+// So I will update buttons here.
+// And I will let `canvas.click` stay mostly as is, BUT I need to update it to :
+// 1. handle 'general' (it blindly sends `calibMode`).
+// 2. update UI after add.
+// Since separate edit, I will stick to buttons here, but I need to handle the UI update in the fetch result.
+// But the fetch is in the `click` handler.
+// So I should probably edit the `click` handler too.
+// I can do multiple chunks? Yes.
+
+// Chunk 1: Buttons
+// Chunk 2: Canvas Click Handler update
 
 // --- Safety Limits & Master Save ---
 const badgeUnsaved = document.getElementById('badge-unsaved');
