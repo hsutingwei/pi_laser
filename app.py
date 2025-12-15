@@ -120,6 +120,10 @@ def add_sample():
 @app.route('/api/calibration/fit', methods=['POST'])
 def fit_calibration():
     res = calibration.fit()
+    if res.get('success'):
+        print(f"[Calibration] Fit succeeded: {res.get('params')}")
+    else:
+        print(f"[Calibration] Fit failed: {res.get('msg')}")
     return jsonify(res)
 
 @app.route('/api/limits/set', methods=['POST'])
@@ -190,9 +194,10 @@ def mock_detection():
     dw = data.get('display_w')
     dh = data.get('display_h')
     
-    # We assume frame size is 640x480 (standard PiCamera)
     # If using dynamic resolution, we should fetch from camera_streamer
     FW, FH = 640, 480
+    if camera_streamer:
+        FW, FH = camera_streamer.resolution
     
     detector.set_detection(x, y, w, h, FW, FH)
     return jsonify({"status": "ok"})
@@ -258,7 +263,10 @@ def background_status_thread():
     while True:
         try:
             status = autopilot.get_status()
-            status['frame_size'] = [640, 480] # Send frame size for frontend scaling
+            if camera_streamer:
+                status['frame_size'] = camera_streamer.resolution
+            else:
+                status['frame_size'] = [640, 480]
             socketio.emit('auto_status', status)
         except Exception as e:
             print(f"Status Loop Error: {e}")

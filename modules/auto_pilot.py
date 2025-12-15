@@ -110,18 +110,14 @@ class AutoPilot:
                         roi_center = self.calibration.predict(pan, tilt)
                         
                         if roi_center:
-                            cx, cy = roi_center
-                            r = self.roi_radius
-                            roi_rect = [cx - r, cy - r, cx + r, cy + r]
-                            
                             # Get Detections (Mock or Real)
                             # Note: detector.detect() creates new bboxes based on logic
                             # For MockDetector, it returns bbox if valid
                             bboxes = self.detector.detect(None)
                             
                             for bbox in bboxes:
-                                if self._check_overlap(bbox, roi_rect):
-                                    print(f"[AutoPilot] HIT! BBox {bbox} overlaps ROI {roi_rect}")
+                                if self._check_hit(bbox, roi_center, self.roi_radius):
+                                    print(f"[AutoPilot] HIT! BBox {bbox} overlaps ROI Center {roi_center}")
                                     self._perform_retarget()
                                     self.state = 'AUTO_COOLDOWN'
                                     self.last_hit_time = now
@@ -165,23 +161,26 @@ class AutoPilot:
              self.last_move_time = time.time()
              break
 
-    def _check_overlap(self, bbox, roi_rect):
-        # bbox: [x, y, w, h] -> [x1, y1, x2, y2]
-        bx1, by1, bw, bh = bbox
-        bx2, by2 = bx1 + bw, by1 + bh
+    def _check_hit(self, bbox, roi_center, roi_radius):
+        """
+        Hit Test: Center-in-ROI
+        Check if the center of the bounding box is within the ROI circle.
+        """
+        if not roi_center:
+            return False
+
+        # BBox Center (Frame Coords)
+        bx, by, bw, bh = bbox
+        bcx = bx + bw / 2
+        bcy = by + bh / 2
         
-        # roi: [rx1, ry1, rx2, ry2]
-        rx1, ry1, rx2, ry2 = roi_rect
+        # ROI Center
+        rcx, rcy = roi_center
         
-        # Intersection
-        ix1 = max(bx1, rx1)
-        iy1 = max(by1, ry1)
-        ix2 = min(bx2, rx2)
-        iy2 = min(by2, ry2)
+        # Euclidean Distance Squared
+        dist_sq = (bcx - rcx)**2 + (bcy - rcy)**2
         
-        if ix1 < ix2 and iy1 < iy2:
-            return True # Overlap exists
-        return False
+        return dist_sq < (roi_radius**2)
         
     def get_status(self):
         # Prepare status payload for WebSocket

@@ -25,7 +25,7 @@
     },
     "calibration": {
         "roi_radius_px": 35,
-        "method": "linear_regression_xy_split"
+        "method": "multivariate_linear_regression_2d"
     },
     "auto_loop": {
         "enabled": true,

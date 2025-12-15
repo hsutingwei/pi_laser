@@ -16,6 +16,7 @@ class CameraStreamer:
         self.thread = None
         self.current_frame = None
         self.lock = threading.Lock()
+        self.resolution = (640, 480) # Default Source of Truth
 
     def start(self):
         if self.running: return
