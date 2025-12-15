@@ -43,8 +43,13 @@ class CameraStreamer:
             with picamera.PiCamera() as camera:
                 camera.resolution = (640, 480)
                 camera.framerate = self.fps
+                
+                # Apply Rotation
+                rot = self.config.get('rotation', 0)
+                camera.rotation = rot
+                
                 time.sleep(2) # Warmup
-                print(f"[Camera] PiCamera initialized. Res: {camera.resolution}")
+                print(f"[Camera] PiCamera initialized. Res: {camera.resolution}, Rotation: {rot}")
                 
                 stream = io.BytesIO()
                 for _ in camera.capture_continuous(stream, 'jpeg', use_video_port=True):

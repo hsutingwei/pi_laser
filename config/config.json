@@ -5,7 +5,8 @@
     ],
     "camera": {
         "stream_fps_cap": 15,
-        "frame_source": "latest_frame_buffer"
+        "frame_source": "latest_frame_buffer",
+        "rotation": 90
     },
     "laser": {
         "gpio_pin": 18,
