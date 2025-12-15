@@ -260,11 +260,12 @@ document.getElementById('btn-lim-tilt-min').addEventListener('click', () => {
 document.getElementById('btn-lim-tilt-max').addEventListener('click', () => {
     setLimit('tilt', 'max');
 });
-document.getElementById('btn-lim-pan-min').addEventListener('click', () => {
-    setLimit('pan', 'min');
+
+document.getElementById('btn-lim-pan-left').addEventListener('click', () => {
+    setLimit('pan', 'max'); // Left is Max (180)
 });
-document.getElementById('btn-lim-pan-max').addEventListener('click', () => {
-    setLimit('pan', 'max');
+document.getElementById('btn-lim-pan-right').addEventListener('click', () => {
+    setLimit('pan', 'min'); // Right is Min (0)
 });
 
 document.getElementById('btn-set-center').addEventListener('click', () => {

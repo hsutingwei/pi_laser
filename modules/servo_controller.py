@@ -58,30 +58,34 @@ class ServoController:
         # value = (angle - 90) / 90
         return (angle - 90) / 90.0
 
-    def set_pan(self, angle):
+    def set_pan(self, angle, ignore_limits=False):
         """Safely set Pan angle within limits"""
-        clamped = max(self.pan_limits[0], min(angle, self.pan_limits[1]))
+        limits = [0, 180] if ignore_limits else self.pan_limits
+        clamped = max(limits[0], min(angle, limits[1]))
+        
         self.current_pan = clamped
         if self.pan_servo:
             val = self._map_angle_to_value(clamped)
             self.pan_servo.value = val
         return clamped
 
-    def set_tilt(self, angle):
+    def set_tilt(self, angle, ignore_limits=False):
         """Safely set Tilt angle within limits"""
-        clamped = max(self.tilt_limits[0], min(angle, self.tilt_limits[1]))
+        limits = [0, 180] if ignore_limits else self.tilt_limits
+        clamped = max(limits[0], min(angle, limits[1]))
+        
         self.current_tilt = clamped
         if self.tilt_servo:
             val = self._map_angle_to_value(clamped)
             self.tilt_servo.value = val
         return clamped
 
-    def move_relative(self, d_pan, d_tilt):
+    def move_relative(self, d_pan, d_tilt, ignore_limits=False):
         """Move relative to current position (useful for joystick integration)"""
         new_pan = self.current_pan + d_pan
         new_tilt = self.current_tilt + d_tilt
         
-        actual_pan = self.set_pan(new_pan)
-        actual_tilt = self.set_tilt(new_tilt)
+        actual_pan = self.set_pan(new_pan, ignore_limits=ignore_limits)
+        actual_tilt = self.set_tilt(new_tilt, ignore_limits=ignore_limits)
         
         return actual_pan, actual_tilt

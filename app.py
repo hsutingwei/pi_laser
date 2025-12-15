@@ -305,8 +305,8 @@ def handle_joystick(data):
     d_pan = pan_input * -SPEED # Inverted Pan
     d_tilt = tilt_input * SPEED # Inverted Tilt 
     
-    # Safe move (manual mode allows laser on)
-    real_pan, real_tilt = servos.move_relative(d_pan, d_tilt)
+    # Safe move (manual mode allows laser on, and now ignores software limits for setup)
+    real_pan, real_tilt = servos.move_relative(d_pan, d_tilt, ignore_limits=True)
     
     # Emit back is handled by periodic status, but fast feedback is good
     emit('gimbal_state', {'pan': real_pan, 'tilt': real_tilt})
