@@ -22,18 +22,33 @@ class CalibrationLogger:
             try:
                 with open(self.filepath, 'r') as f:
                     data = json.load(f)
-                    self.params = data.get('params', self.params)
-                    # Support legacy migration if needed, but for now just load 'samples'
-                    # If legacy 'samples_x' exists, merge them?
+                    
+                    # Migration: Samples
                     if 'samples' in data:
                         self.samples = data['samples']
                     else:
-                        # Migration from old format
                         sx = data.get('samples_x', [])
                         sy = data.get('samples_y', [])
                         self.samples = sx + sy
-                        
-                    self.calibrated = data.get('calibrated', False)
+                    
+                    # Params Validation & Migration
+                    loaded_params = data.get('params', {})
+                    if 'c1' in loaded_params:
+                        self.params = loaded_params
+                        self.calibrated = data.get('calibrated', False)
+                    else:
+                        # Legacy Params detected, ignore them and re-fit
+                        print("[Calibration] Legacy params detected. Attempting migration via re-fit...")
+                        self.calibrated = False 
+                        if len(self.samples) >= 3:
+                            res = self.fit() # This computes params, sets calibrated=True, and saves
+                            if res['success']:
+                                print("[Calibration] Migration Success: 2D Params generated.")
+                            else:
+                                print(f"[Calibration] Migration Fit Failed: {res.get('msg')}")
+                        else:
+                             print("[Calibration] Not enough samples for migration.")
+
                     print(f"Calibration loaded: {self.calibrated} ({len(self.samples)} samples)")
             except Exception as e:
                 print(f"Error loading calibration: {e}")
