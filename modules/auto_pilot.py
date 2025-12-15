@@ -173,9 +173,10 @@ class AutoPilot:
             return False
 
         # BBox Center (Frame Coords)
-        bx, by, bw, bh = bbox
-        bcx = bx + bw / 2
-        bcy = by + bh / 2
+        # bbox is [x1, y1, x2, y2]
+        x1, y1, x2, y2 = bbox
+        bcx = (x1 + x2) / 2
+        bcy = (y1 + y2) / 2
         
         # ROI Center
         rcx, rcy = roi_center

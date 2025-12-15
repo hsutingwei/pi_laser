@@ -159,12 +159,18 @@ function drawOverlay(data) {
         data.bboxes.forEach(det => {
             let bx, by, bw, bh, label, score;
 
-            if (Array.isArray(det)) {
-                [bx, by, bw, bh] = det;
-            } else {
-                [bx, by, bw, bh] = det.bbox;
+            if (det.bbox) {
+                // New Dict Format with XYXY
+                const [x1, y1, x2, y2] = det.bbox;
+                bx = x1;
+                by = y1;
+                bw = x2 - x1;
+                bh = y2 - y1;
                 label = det.label;
                 score = det.score;
+            } else if (Array.isArray(det)) {
+                // Fallback Legacy (XYWH)
+                [bx, by, bw, bh] = det;
             }
 
             ctx.strokeRect(bx, by, bw, bh);
