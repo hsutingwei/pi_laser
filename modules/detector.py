@@ -60,4 +60,8 @@ class MockDetector(BaseDetector):
             self.current_bbox = None
             return []
 
-        return [self.current_bbox]
+        return [{
+            "bbox": self.current_bbox,
+            "label": "mock_cat",
+            "score": 1.0
+        }]

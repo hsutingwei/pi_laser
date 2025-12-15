@@ -115,9 +115,12 @@ class AutoPilot:
                             # For MockDetector, it returns bbox if valid
                             bboxes = self.detector.detect(None)
                             
-                            for bbox in bboxes:
+                            for det in bboxes:
+                                bbox = det.get('bbox')
+                                if not bbox: continue
+                                
                                 if self._check_hit(bbox, roi_center, self.roi_radius):
-                                    print(f"[AutoPilot] HIT! BBox {bbox} overlaps ROI Center {roi_center}")
+                                    print(f"[AutoPilot] HIT! {det.get('label')} ({det.get('score'):.2f})")
                                     self._perform_retarget()
                                     self.state = 'AUTO_COOLDOWN'
                                     self.last_hit_time = now

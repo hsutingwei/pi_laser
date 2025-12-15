@@ -149,12 +149,30 @@ function drawOverlay(data) {
     }
 
     // Draw BBoxes (Red)
+    // Draw BBoxes (Red)
     if (data.bboxes && data.bboxes.length > 0) {
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 2;
-        data.bboxes.forEach(bbox => {
-            const [bx, by, bw, bh] = bbox;
+        ctx.font = '14px Arial';
+        ctx.fillStyle = 'red'; // For Text
+
+        data.bboxes.forEach(det => {
+            let bx, by, bw, bh, label, score;
+
+            if (Array.isArray(det)) {
+                [bx, by, bw, bh] = det;
+            } else {
+                [bx, by, bw, bh] = det.bbox;
+                label = det.label;
+                score = det.score;
+            }
+
             ctx.strokeRect(bx, by, bw, bh);
+
+            if (label) {
+                const text = `${label.toUpperCase()} ${(score * 100).toFixed(0)}%`;
+                ctx.fillText(text, bx, by - 5);
+            }
         });
     }
 }
