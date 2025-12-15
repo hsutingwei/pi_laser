@@ -126,9 +126,14 @@ function drawOverlay(data) {
         ctx.rect(rx - r, ry - r, r * 2, r * 2);
         ctx.stroke();
 
-        // Center Dot
-        ctx.fillStyle = 'yellow';
-        ctx.fillRect(rx - 2, ry - 2, 4, 4);
+        // Center Dot (Hollow Circle)
+        // ctx.fillStyle = 'yellow';
+        // ctx.fillRect(rx - 2, ry - 2, 4, 4);
+        ctx.beginPath();
+        ctx.arc(rx, ry, 6, 0, 2 * Math.PI);
+        ctx.strokeStyle = 'yellow';
+        ctx.lineWidth = 2;
+        ctx.stroke();
     }
 
     // Draw BBoxes (Red)
