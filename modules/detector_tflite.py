@@ -201,8 +201,16 @@ class TFLiteDetector(BaseDetector):
             logger.error(f"Label load error: {e}")
             return {}
 
-    # ... status ...
-    # ... get_latest_detections ...
+    def status(self):
+        return {
+            "mode": "tflite",
+            "backend": self.backend,
+            "inference_ms": self.inference_ms,
+            "ready": self.interpreter is not None
+        }
+
+    def get_latest_detections(self):
+        return self.latest_detections
 
     def process_frame(self, frame_bytes):
         if not self.interpreter: return
