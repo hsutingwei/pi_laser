@@ -1,6 +1,3 @@
-from gevent import monkey
-monkey.patch_all()
-
 from flask import Flask, render_template, Response, request, jsonify
 from flask_socketio import SocketIO, emit
 from modules.servo_controller import ServoController
@@ -19,7 +16,7 @@ import sys
 
 # --- Setup ---
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 # Load Config
 CONFIG_PATH = 'config/config.json'
