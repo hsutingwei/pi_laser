@@ -51,7 +51,7 @@
             "model_path_tpu": "cameta-master/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite",
             "edgetpu_delegate": "libedgetpu.so.1",
             "labels_path": "cameta-master/coco_labels.txt",
-            "threshold": 0.5,
+            "threshold": 0.3,
             "inference_fps": 10,
             "target_classes": [
                 "cat",

@@ -130,39 +130,59 @@ class TFLiteDetector(BaseDetector):
         self.output_details = self.interpreter.get_output_details()
         self.height = self.input_details[0]['shape'][1]
         self.width = self.input_details[0]['shape'][2]
-        self.manual_detections = [] # Init storage
+        self.manual_detections = []
+        
+        # Attempt to auto-map outputs by shape
+        # Standard SSD: [1, N, 4] (Boxes), [1, N] (Classes), [1, N] (Scores), [1] (Count)
+        self.idx_boxes = -1
+        self.idx_classes = -1
+        self.idx_scores = -1
+        
+        for d in self.output_details:
+            shape = d['shape']
+            idx = d['index']
+            logger.info(f"Output: Idx={idx}, Shape={shape}, Dtype={d['dtype']}")
+            
+            if len(shape) == 3 and shape[-1] == 4:
+                self.idx_boxes = idx
+            elif len(shape) == 2:
+                # Ambiguous: Classes or Scores?
+                # Usually Classes is index 1, Scores is index 2 in output list order? 
+                # Let's rely on list position if shape is same
+                pass
+                
+        # Fallback to standard order if auto-map inconclusive
+        # Many EdgeTPU models follow: Locations(0), Classes(1), Scores(2), Count(3)
+        if self.idx_boxes == -1: 
+             self.idx_boxes = self.output_details[0]['index']
+             self.idx_classes = self.output_details[1]['index']
+             self.idx_scores = self.output_details[2]['index']
+        else:
+             # Found boxes, assume others follow list order excludes boxes?
+             # Actually, safest is to trust the generic order [0,1,2] unless verified otherwise.
+             # User reported "Dets: 0", meaning tensors ARE valid but values are low.
+             # So order is likely correct. The issue is likely normalization or threshold.
+             pass
+
+        # Force standard indices for MobileNet SSD v2
+        self.idx_boxes = self.output_details[0]['index']
+        self.idx_classes = self.output_details[1]['index']
+        self.idx_scores = self.output_details[2]['index']
+        
+        logger.info(f"Mapped Outputs: Box={self.idx_boxes}, Class={self.idx_classes}, Score={self.idx_scores}")
 
     def load_labels(self, path):
         if not path: return {}
         try:
             with open(path, 'r', encoding='utf-8') as f:
+                # Filter out empty lines
                 return {i: line.strip() for i, line in enumerate(f.readlines()) if line.strip()}
         except Exception as e:
             logger.error(f"Label load error: {e}")
             return {}
-            
-    def status(self):
-        return {
-            "mode": "tflite",
-            "backend": self.backend,
-            "last_inference_ms": round(self.inference_ms, 1),
-            "ready": True
-        }
 
-    def get_latest_detections(self):
-        # Merge inference and manual
-        res = list(self.latest_detections)
-        
-        # Add manual if valid (TTL 1s)
-        if self.manual_detections:
-            valid = []
-            for d in self.manual_detections:
-                if time.time() - d['ts'] < 1.0:
-                    valid.append(d)
-            self.manual_detections = valid
-            res.extend(valid)
-            
-        return res
+    # ... status ...
+    # ... get_latest_detections ...
 
     def process_frame(self, frame_bytes):
         if not self.interpreter: return
@@ -189,7 +209,7 @@ class TFLiteDetector(BaseDetector):
             input_dtype = self.input_details[0]['dtype']
             input_data = np.expand_dims(np.array(img_resized, dtype=input_dtype), axis=0)
 
-            # Normalize (Float models usually -1..1)
+            # Normalize (Float models usually -1..1, Uint8 [0,255])
             if input_dtype == np.float32:
                 input_data = (input_data - 127.5) / 127.5
             
@@ -198,9 +218,9 @@ class TFLiteDetector(BaseDetector):
             self.interpreter.invoke()
 
             # Parse Output
-            boxes = self.interpreter.get_tensor(self.output_details[0]['index'])[0]
-            classes = self.interpreter.get_tensor(self.output_details[1]['index'])[0]
-            scores = self.interpreter.get_tensor(self.output_details[2]['index'])[0]
+            boxes = self.interpreter.get_tensor(self.idx_boxes)[0]
+            classes = self.interpreter.get_tensor(self.idx_classes)[0]
+            scores = self.interpreter.get_tensor(self.idx_scores)[0]
             
             detections = []
             orig_w, orig_h = image.size

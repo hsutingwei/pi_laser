@@ -88,4 +88,12 @@ class ServoController:
         actual_pan = self.set_pan(new_pan, ignore_limits=ignore_limits)
         actual_tilt = self.set_tilt(new_tilt, ignore_limits=ignore_limits)
         
-        return actual_pan, actual_tilt
+    def detach(self):
+        """Stop sending pulses to servos"""
+        if self.pan_servo:
+            self.pan_servo.value = None
+            self.pan_servo.close()
+        if self.tilt_servo:
+            self.tilt_servo.value = None
+            self.tilt_servo.close()
+        print("[Servo] Detached")
