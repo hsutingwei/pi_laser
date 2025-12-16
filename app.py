@@ -1,3 +1,10 @@
+from gevent import monkey
+try:
+    monkey.patch_all()
+    print("[System] Gevent Monkey Patched")
+except ImportError:
+    pass
+
 from flask import Flask, render_template, Response, request, jsonify
 from flask_socketio import SocketIO, emit
 from modules.servo_controller import ServoController
@@ -14,9 +21,21 @@ import atexit
 import signal
 import sys
 
+# --- Async Mode Selection ---
+async_mode = None
+try:
+    import gevent
+    import geventwebsocket
+    async_mode = 'gevent'
+except ImportError:
+    async_mode = 'threading'
+    print("[System] Warning: Gevent/Gevent-Websocket not found. Using Threading mode.")
+
+print(f"[System] Async Mode: {async_mode}")
+
 # --- Setup ---
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode=async_mode)
 
 # Load Config
 CONFIG_PATH = 'config/config.json'
@@ -79,6 +98,7 @@ camera_streamer = None
 # --- Routes ---
 @app.route('/')
 def index():
+    # Force client to update cache
     return render_template('index.html', version=int(time.time()))
 
 @app.route('/video_feed')

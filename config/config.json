@@ -54,9 +54,7 @@
             "threshold": 0.3,
             "inference_fps": 10,
             "target_classes": [
-                "cat",
-                "person",
-                "dog"
+                "cat"
             ]
         }
     }
