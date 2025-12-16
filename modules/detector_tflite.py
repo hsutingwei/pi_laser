@@ -249,11 +249,34 @@ class TFLiteDetector(BaseDetector):
             for i in range(len(scores)):
                 score = float(scores[i])
                 
-                # DEBUG DET (Sampled)
-                if self.frame_count % 30 == 0 and score > 0.1:
-                    logger.info(f"DEBUG DET: Score={score:.2f}, ClassID={int(classes[i])}")
+                # Filter out very low confidence
+                if score < 0.1: continue
 
-                if score >= self.threshold:
+                class_id = int(classes[i])
+                label = self.labels.get(class_id, f"unknown_{class_id}")
+                label_lower = label.lower()
+                
+                # Filter Logic
+                # If target_classes is empty -> Allow all
+                pass_filter = True
+                if target_classes:
+                    if 'all' not in target_classes:
+                        # Check partial match? or Exact? config implies exact "cat".
+                        # But label might be "16 cat" or just "cat".
+                        # Our loader tries to strip ID.
+                        if label_lower not in target_classes:
+                            pass_filter = False
+                
+                # DEBUG LOG (Sampled)
+                if self.frame_count % 30 == 0:
+                    status = "KEEP" if (pass_filter and score >= self.threshold) else "DROP"
+                    reason = ""
+                    if not pass_filter: reason = f"(Label '{label_lower}' not in {target_classes})"
+                    elif score < self.threshold: reason = f"(Score {score:.2f} < {self.threshold})"
+                    
+                    logger.info(f"DET: ID={class_id} L={label} S={score:.2f} -> {status} {reason}")
+
+                if pass_filter and score >= self.threshold:
                     ymin, xmin, ymax, xmax = boxes[i]
                     
                     # Convert to [x1, y1, x2, y2]
@@ -261,12 +284,6 @@ class TFLiteDetector(BaseDetector):
                     top = int(max(0, ymin * orig_h))
                     right = int(min(orig_w, xmax * orig_w))
                     bottom = int(min(orig_h, ymax * orig_h))
-                    
-                    class_id = int(classes[i])
-                    label = self.labels.get(class_id, "unknown")
-                    
-                    if target_classes and label.lower() not in target_classes:
-                        continue
                     
                     detections.append({
                         "bbox": [left, top, right, bottom], # [x1, y1, x2, y2]
