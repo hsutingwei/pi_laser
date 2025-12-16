@@ -47,17 +47,16 @@
         "tflite": {
             "backend": "tpu",
             "fallback_backend": "cpu",
-            "model_path": "cameta-master/detect.tflite",
-            "model_path_tpu": "cameta-master/detect_edgetpu.tflite",
+            "model_path": "cameta-master/mobilenet_ssd_v2_coco_quant_postprocess.tflite",
+            "model_path_tpu": "cameta-master/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite",
             "edgetpu_delegate": "libedgetpu.so.1",
-            "labels_path": "cameta-master/labelmap.txt",
+            "labels_path": "cameta-master/coco_labels.txt",
             "threshold": 0.5,
             "inference_fps": 10,
             "target_classes": [
                 "cat",
                 "person",
-                "dog",
-                "teddy bear"
+                "dog"
             ]
         }
     }
