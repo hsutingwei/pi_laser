@@ -179,9 +179,24 @@ class TFLiteDetector(BaseDetector):
     def load_labels(self, path):
         if not path: return {}
         try:
+            labels = {}
             with open(path, 'r', encoding='utf-8') as f:
-                # Filter out empty lines
-                return {i: line.strip() for i, line in enumerate(f.readlines()) if line.strip()}
+                for i, line in enumerate(f.readlines()):
+                    line = line.strip()
+                    if not line: continue
+                    
+                    # Try to parse "ID Label" format (e.g. "16 cat")
+                    parts = line.split(maxsplit=1)
+                    if len(parts) == 2 and parts[0].isdigit():
+                        idx = int(parts[0])
+                        txt = parts[1].strip()
+                        labels[idx] = txt
+                    else:
+                        # Fallback to line index
+                        labels[i] = line
+            
+            logger.info(f"Loaded {len(labels)} labels from {path}")
+            return labels
         except Exception as e:
             logger.error(f"Label load error: {e}")
             return {}
