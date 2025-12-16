@@ -128,6 +128,11 @@ class TFLiteDetector(BaseDetector):
         self.interpreter.allocate_tensors()
         self.input_details = self.interpreter.get_input_details()
         self.output_details = self.interpreter.get_output_details()
+        
+        # Log Input Details
+        if self.input_details:
+             logger.info(f"Input: Shape={self.input_details[0]['shape']}, Dtype={self.input_details[0]['dtype']}")
+             
         self.height = self.input_details[0]['shape'][1]
         self.width = self.input_details[0]['shape'][2]
         self.manual_detections = []
@@ -228,6 +233,11 @@ class TFLiteDetector(BaseDetector):
 
             for i in range(len(scores)):
                 score = float(scores[i])
+                
+                # DEBUG DET (Sampled)
+                if self.frame_count % 30 == 0 and score > 0.1:
+                    logger.info(f"DEBUG DET: Score={score:.2f}, ClassID={int(classes[i])}")
+
                 if score >= self.threshold:
                     ymin, xmin, ymax, xmax = boxes[i]
                     
