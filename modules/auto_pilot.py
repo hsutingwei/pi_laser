@@ -29,13 +29,10 @@ class AutoPilot:
         self.tilt_limits = config_data.get('servos', {}).get('tilt_limits_deg', [0, 180])
 
     def start(self):
-        if self.running:
-            return
+        if self.running: return
         
-        # Safety: Prevent double start in debug reloader
+        # Safety for Flask reloader
         if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not os.environ.get('WERKZEUG_RUN_MAIN'):
-             # Logic is tricky here with Flask reloader. 
-             # We rely on app.py calling this only in the right context.
              pass
 
         self.running = True
@@ -51,7 +48,6 @@ class AutoPilot:
         print("[AutoPilot] Stopped")
 
     def set_mode(self, mode):
-        # mode: 'manual' or 'auto'
         if mode == 'auto':
             self.state = 'AUTO_READY'
             print("[AutoPilot] Switched to AUTO_READY")
@@ -80,16 +76,15 @@ class AutoPilot:
 
                 # --- AUTO_READY ---
                 if self.state == 'AUTO_READY':
-                    # 1. Safety Check: Move Settle
+                    # 1. Move Settle Check
                     is_settled = (now - self.last_move_time) * 1000 > self.settle_ms
                     
-                    # 2. Safety Check: Max Laser On
-                    # If laser has been on too long, force a retarget (cooldown)
+                    # 2. Max Laser On Check
                     if self.laser.state and (now - self.laser_on_start_time) * 1000 > self.max_laser_on_ms:
                          print("[AutoPilot] Max Laser Time Reached -> Retargeting")
                          self._perform_retarget()
                          self.state = 'AUTO_COOLDOWN'
-                         self.last_hit_time = now # Treat as hit to trigger cooldown
+                         self.last_hit_time = now 
                          continue
 
                     # 3. Laser Control
@@ -102,17 +97,16 @@ class AutoPilot:
                             self.laser.off()
 
                     # 4. Detection & Hit Test
-                    # Only check hit if laser is actually ON (or about to be) and we are settled
                     if is_settled:
-                        # Get Predicted ROI
                         pan = self.servos.current_pan
                         tilt = self.servos.current_tilt
                         roi_center = self.calibration.predict(pan, tilt)
                         
                         if roi_center:
-                            # Get Detections
+                            # Use Latest Detections (Passive)
                             bboxes = self.detector.get_latest_detections()
-                            # Sort by score (Highest confidence first)
+                            
+                            # Sort: Highest Score First
                             bboxes.sort(key=lambda x: x.get('score', 0), reverse=True)
                             
                             for det in bboxes:
@@ -127,8 +121,8 @@ class AutoPilot:
                                     break
             
             except Exception as e:
-                print(f"[AutoPilot] Error: {e}")
-                time.sleep(1.0) # Prevent tight loop fail
+                print(f"[AutoPilot] Loop Error: {e}")
+                time.sleep(1.0)
             
             time.sleep(0.05) # 20Hz loop
 
@@ -136,69 +130,48 @@ class AutoPilot:
         """Turn laser off, move random amount"""
         self.laser.off()
         
-        # Parse params
         retarget = self.config.get('retarget', {})
         j_pan = retarget.get('pan_jitter_deg', 10)
         j_tilt = retarget.get('tilt_jitter_deg', 6)
         min_move = retarget.get('min_move_deg', 2.0)
         
-        # Current
         c_pan = self.servos.current_pan
         c_tilt = self.servos.current_tilt
         
-        # Retry loop for valid move
         for _ in range(5):
              dp = random.uniform(-j_pan, j_pan)
              dt = random.uniform(-j_tilt, j_tilt)
-             
-             # Check minimum move
-             if abs(dp) < min_move and abs(dt) < min_move:
-                 continue
+             if abs(dp) < min_move and abs(dt) < min_move: continue
                  
-             # Check limits (simple clamp check, ServoController clamps too but we want to avoid sticky edges)
-             t_pan = c_pan + dp
-             t_tilt = c_tilt + dt
-             
-             # Apply
              self.servos.move_relative(dp, dt)
              self.last_move_time = time.time()
              break
 
     def _check_hit(self, bbox, roi_center, roi_radius):
-        """
-        Hit Test: Center-in-ROI
-        Check if the center of the bounding box is within the ROI circle.
-        """
-        if not roi_center:
-            return False
+        """Hit Test: Center-in-ROI (XYXY format)"""
+        if not roi_center: return False
 
-        # BBox Center (Frame Coords)
         # bbox is [x1, y1, x2, y2]
         x1, y1, x2, y2 = bbox
         bcx = (x1 + x2) / 2
         bcy = (y1 + y2) / 2
         
-        # ROI Center
         rcx, rcy = roi_center
-        
-        # Euclidean Distance Squared
         dist_sq = (bcx - rcx)**2 + (bcy - rcy)**2
         
         return dist_sq < (roi_radius**2)
         
     def get_status(self):
-        # Prepare status payload for WebSocket
-        # Predicted ROI
         roi = None
         if self.calibration.calibrated:
              roi = self.calibration.predict(self.servos.current_pan, self.servos.current_tilt)
              
-        # Detector BBox (For viz)
+        # Detector BBox (For viz) - PASSIVE READ
         bboxes = self.detector.get_latest_detections()
         
         return {
             "state": self.state,
-            "roi": roi, # (x, y) center
+            "roi": roi, 
             "roi_radius": self.roi_radius,
             "bboxes": bboxes,
             "laser": self.laser.state,

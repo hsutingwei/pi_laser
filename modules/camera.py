@@ -54,7 +54,8 @@ class CameraStreamer:
             "backend": self.backend,
             "fps": round(fps, 1),
             "frames": self.frame_count,
-            "error": self.error_msg
+            "error": self.error_msg,
+            "resolution": self.resolution
         }
 
     def _capture_loop(self):
@@ -65,7 +66,7 @@ class CameraStreamer:
                 self._picamera_loop()
             except Exception as e:
                 self.error_msg = str(e)
-                logger.error(f"PiCamera Critical Error: {e}. Fallback to Mock.")
+                logger.warning(f"PiCamera Init Failed: {e}. Fallback to Mock (backend='mock').")
                 self.backend = 'mock'
                 self._mock_loop()
         else:

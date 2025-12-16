@@ -1,5 +1,6 @@
 import time
 import logging
+import os
 import sys
 
 # Configure logger
@@ -10,13 +11,9 @@ class BaseDetector:
     """
     Abstract Base Class for Detectors.
     Interface:
-    - process_frame(frame_bytes): Process a new frame (async or sync).
-    - get_latest_detections(): Return list of dicts:
-      [{
-         'bbox': [x1, y1, x2, y2], # Pixel coordinates
-         'label': str,
-         'score': float
-      }]
+    - process_frame(frame_bytes): Process a new frame (async output update).
+    - get_latest_detections(): Return list of dicts: [{'bbox':[x1,y1,x2,y2], 'label':str, 'score':float}]
+    - status(): Return dict for health check.
     """
     def process_frame(self, frame_bytes):
         pass
@@ -24,9 +21,8 @@ class BaseDetector:
     def get_latest_detections(self):
         return []
     
-    def detect(self, frame):
-        # Legacy/Testing alias
-        return self.get_latest_detections()
+    def status(self):
+        return {"mode": "base", "ready": False}
 
 class MockDetector(BaseDetector):
     def __init__(self, config):
@@ -37,16 +33,8 @@ class MockDetector(BaseDetector):
         logger.info("MockDetector initialized")
 
     def set_detection(self, x, y, w, h, fw, fh):
-        """
-        Triggered by UI to simulate a detection.
-        Params are consistent with previous logical arguments (likely center x,y).
-        """
-        # Previous logic: client x,y were raw, scaled to fw/fh
-        # We assume caller has handled scaling to frame coords OR we do it.
-        # Let's support the existing signature usage from app.py
-        
-        # Logic: x,y are Center. w,h are Dimensions.
-        # Convert to [x1, y1, x2, y2]
+        """Simulate detection logic."""
+        # x,y are Center. w,h are Dimensions.
         x1 = max(0, int(x - w / 2))
         y1 = max(0, int(y - h / 2))
         x2 = min(fw, int(x + w / 2))
@@ -65,25 +53,28 @@ class MockDetector(BaseDetector):
             return [self.current_det]
         return []
         
-    def process_frame(self, frame):
-        # Mock doesn't process frames
-        pass
-
-import os
+    def status(self):
+        return {
+            "mode": "mock",
+            "ready": True,
+            "last_update": self.last_update
+        }
 
 def create_detector(config):
     det_config = config.get('detector', {})
     method = det_config.get('current') 
     
-    # Auto-detect if not specified
+    # Auto-detect logic
     if not method:
-        # Check if tflite model exists
         model_path = det_config.get('tflite', {}).get('model_path')
         if model_path and os.path.exists(model_path):
              logger.info(f"Auto-selecting TFLite (Model found: {model_path})")
              method = 'tflite'
         else:
-             logger.info("Auto-selecting Mock (No TFLite config/model found)")
+             if model_path:
+                 logger.warning(f"Model path {model_path} implies TFLite, but file not found. Fallback to Mock.")
+             else:
+                 logger.info("No model path configured. Using Mock.")
              method = 'mock'
     
     logger.info(f"Factory: Creating detector for mode '{method}'")
@@ -91,10 +82,11 @@ def create_detector(config):
     if method == 'tflite':
         try:
             from .detector_tflite import TFLiteDetector
+            logger.info("Attempting TFLite Init...")
             return TFLiteDetector(config)
         except Exception as e:
-            logger.error(f"Failed to load TFLiteDetector: {e}. Falling back to Mock.")
-            # Fallthrough to mock
+            logger.error(f"TFLite Init Failed: {e}. Fallback to Mock.")
+            # Fallthrough intentionally
             
     return MockDetector(config)
 

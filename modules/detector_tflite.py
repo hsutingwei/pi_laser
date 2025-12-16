@@ -141,20 +141,13 @@ class TFLiteDetector(BaseDetector):
             logger.error(f"Label load error: {e}")
             return {}
             
-    def set_detection(self, x, y, w, h, fw, fh):
-        """Inject a manual detection for testing."""
-        x1 = max(0, int(x - w / 2))
-        y1 = max(0, int(y - h / 2))
-        x2 = min(fw, int(x + w / 2))
-        y2 = min(fh, int(y + h / 2))
-        
-        self.manual_detections = [{
-            "bbox": [x1, y1, x2, y2],
-            "label": "manual",
-            "score": 1.0,
-            "ts": time.time()
-        }]
-        logger.info("Manual Detection Injected")
+    def status(self):
+        return {
+            "mode": "tflite",
+            "backend": self.backend,
+            "last_inference_ms": round(self.inference_ms, 1),
+            "ready": True
+        }
 
     def get_latest_detections(self):
         # Merge inference and manual
