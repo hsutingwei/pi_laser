@@ -16,7 +16,7 @@ import sys
 
 # --- Setup ---
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Load Config
 CONFIG_PATH = 'config/config.json'
