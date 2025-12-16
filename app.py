@@ -1,3 +1,6 @@
+from gevent import monkey
+monkey.patch_all()
+
 from flask import Flask, render_template, Response, request, jsonify
 from flask_socketio import SocketIO, emit
 from modules.servo_controller import ServoController
