@@ -19,7 +19,7 @@ sudo apt-get upgrade
 4. **重新啟動** 您的 Pi。
 
 ### B. Coral Edge TPU (USB 加速器)
-您必須安裝 USB 加速器的系統驅動程式。
+您必須安裝 USB 加速器的系統驅動程式。 (詳見 [官方安裝教學](https://coral.ai/docs/accelerator/get-started/#2-install-the-pycoral-library))
 
 1. **加入 Google Coral 套件庫:**
    ```bash

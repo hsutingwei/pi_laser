@@ -148,3 +148,14 @@
 
 ### 🌐 介面 (Interface)
 *   **`app.py`**: 這是主程式入口。它啟動了一個網頁伺服器，讓您可以用手機或電腦瀏覽器看到即時畫面，並手動控制雷射。
+
+## 🤝 致謝 (Acknowledgements)
+
+特別感謝 [Google Coral Camera Examples](https://github.com/google-coral/examples-camera) 專案。本專案的視覺偵測核心 (Vision Module) 係基於其高效能的範例程式碼進行改寫與整合，以實現 Edge TPU 的即時推論能力。
+
+## 🔗 參考資料 (References)
+
+- **Google Coral Edge TPU**: [官方安裝指南](https://coral.ai/docs/accelerator/get-started/)
+- **Google Coral Examples**: [GitHub Repository (Detection Module Source)](https://github.com/google-coral/examples-camera)
+- **Pigpio Library**: [官方文件](http://abyz.me.uk/rpi/pigpio/)
+- **Raspberry Pi**: [官方文件](https://www.raspberrypi.org/documentation/)
