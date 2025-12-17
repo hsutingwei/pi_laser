@@ -1,13 +1,14 @@
 import time
-from gpiozero.pins.pigpio import PiGPIOFactory
-from gpiozero import Servo
-import math
+import logging
+from .servo_driver import ServoDriverPigpio, ServoDriverGPIO
+
+logger = logging.getLogger("ServoController")
 
 # Configuration from JSON
 PIN_PAN = 27
 PIN_TILT = 17
 
-# Standard SG90 Pulse Widths (approximate, tuning may be needed)
+# Standard SG90 Pulse Widths
 MIN_PULSE = 0.5/1000
 MAX_PULSE = 2.5/1000
 
@@ -18,26 +19,27 @@ TILT_MIN_ANGLE = 0
 TILT_MAX_ANGLE = 180
 
 class ServoController:
-    def __init__(self, factory=None):
-        self.factory = factory
-        if self.factory is None:
-            # Fallback or local testing hack
-            try:
-                self.factory = PiGPIOFactory()
-            except Exception as e:
-                print(f"Warning: Could not connect to pigpio: {e}")
-                self.factory = None
-
-        self.pan_servo = None
-        self.tilt_servo = None
+    def __init__(self, config_data=None):
+        self.driver = None
         
+        # Config
+        driver_type = 'gpio'
+        if config_data:
+             driver_type = config_data.get('servos', {}).get('driver', 'gpio')
+        
+        # Initialize Driver
+        if driver_type == 'pigpio':
+            try:
+                self.driver = ServoDriverPigpio(PIN_PAN, PIN_TILT, MIN_PULSE, MAX_PULSE)
+            except Exception as e:
+                logger.error(f"Failed to init pigpio: {e}. Falling back to GPIO.")
+                self.driver = ServoDriverGPIO(PIN_PAN, PIN_TILT, MIN_PULSE, MAX_PULSE)
+        else:
+            self.driver = ServoDriverGPIO(PIN_PAN, PIN_TILT, MIN_PULSE, MAX_PULSE)
+
         # Initialize Limits (Dynamic)
         self.pan_limits = [PAN_MIN_ANGLE, PAN_MAX_ANGLE]
         self.tilt_limits = [TILT_MIN_ANGLE, TILT_MAX_ANGLE]
-        
-        if self.factory:
-            self.pan_servo = Servo(PIN_PAN, min_pulse_width=MIN_PULSE, max_pulse_width=MAX_PULSE, pin_factory=self.factory)
-            self.tilt_servo = Servo(PIN_TILT, min_pulse_width=MIN_PULSE, max_pulse_width=MAX_PULSE, pin_factory=self.factory)
         
         self.current_pan = 90
         self.current_tilt = 90
@@ -49,14 +51,7 @@ class ServoController:
     def set_limits(self, pan_limits=None, tilt_limits=None):
         if pan_limits: self.pan_limits = pan_limits
         if tilt_limits: self.tilt_limits = tilt_limits
-        print(f"[Servo] Limits updated: Pan={self.pan_limits}, Tilt={self.tilt_limits}")
-
-    def _map_angle_to_value(self, angle):
-        """Maps 0-180 degree to -1 to 1 value for gpiozero"""
-        # gpiozero: -1 = min_pulse, 1 = max_pulse
-        # We assume 0 deg = min_pulse (-1), 180 deg = max_pulse (1)
-        # value = (angle - 90) / 90
-        return (angle - 90) / 90.0
+        logger.info(f"Limits updated: Pan={self.pan_limits}, Tilt={self.tilt_limits}")
 
     def set_pan(self, angle, ignore_limits=False):
         """Safely set Pan angle within limits"""
@@ -64,9 +59,8 @@ class ServoController:
         clamped = max(limits[0], min(angle, limits[1]))
         
         self.current_pan = clamped
-        if self.pan_servo:
-            val = self._map_angle_to_value(clamped)
-            self.pan_servo.value = val
+        if self.driver:
+            self.driver.set_angle('pan', clamped)
         return clamped
 
     def set_tilt(self, angle, ignore_limits=False):
@@ -75,13 +69,12 @@ class ServoController:
         clamped = max(limits[0], min(angle, limits[1]))
         
         self.current_tilt = clamped
-        if self.tilt_servo:
-            val = self._map_angle_to_value(clamped)
-            self.tilt_servo.value = val
+        if self.driver:
+            self.driver.set_angle('tilt', clamped)
         return clamped
 
     def move_relative(self, d_pan, d_tilt, ignore_limits=False):
-        """Move relative to current position (useful for joystick integration)"""
+        """Move relative to current position"""
         new_pan = self.current_pan + d_pan
         new_tilt = self.current_tilt + d_tilt
         
@@ -92,10 +85,6 @@ class ServoController:
 
     def detach(self):
         """Stop sending pulses to servos"""
-        if self.pan_servo:
-            self.pan_servo.value = None
-            self.pan_servo.close()
-        if self.tilt_servo:
-            self.tilt_servo.value = None
-            self.tilt_servo.close()
-        print("[Servo] Detached")
+        if self.driver:
+            self.driver.cleanup()
+        logger.info("Detached")
