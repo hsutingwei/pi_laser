@@ -1,0 +1,10 @@
+flask
+flask-socketio
+gevent
+gevent-websocket
+gpiozero
+pigpio
+numpy
+Pillow
+# Note: tflite_runtime is best installed via system package or specific wheel for Pi
+# tflite_runtime 
