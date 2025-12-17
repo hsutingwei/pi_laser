@@ -1,0 +1,99 @@
+# 🐱 Pi Laser Cat Toy (AI 驅動)
+
+這是一個基於 Raspberry Pi 4、Google Coral Edge TPU 和電腦視覺技術所打造的自動雷射逗貓玩具。
+
+![Status](https://img.shields.io/badge/Status-Active-success)
+![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%204-C51A4A)
+![Accelerator](https://img.shields.io/badge/AI-Coral%20Edge%20TPU-blue)
+
+## ✨ 功能特色
+
+- **AI 追蹤**: 使用 MobileNet SSD v2 (Edge TPU 加速) 即時偵測並追蹤貓咪 (~20 FPS)。
+- **智慧安全**: 
+    - **閃避機制**: 當雷射點太靠近貓咪時，系統會自動關閉雷射並將伺服馬達移開。
+    - **冷卻時間**: 避免頻繁重複觸發雷射。
+- **平滑運動**: 使用 PID 控制器搭配 `pigpio` 硬體計時，消除伺服馬達的抖動問題。
+- **網頁介面**: 提供即時影像串流、手動搖桿控制，以及透過 Flask 網頁應用程式進行參數設定。
+
+## 🛠️ 硬體需求
+
+- **Raspberry Pi 4** (建議 2GB+ RAM)
+- **Google Coral USB Accelerator** (高 FPS 必備)
+- **Pi Camera 模組** (支援 v1/v2/v3)
+- **Pan/Tilt 伺服馬達套件** (SG90 伺服馬達)
+- **雷射二極體** (透過 GPIO 控制)
+- **外部 5V 電源** (強烈建議用於伺服馬達獨立供電)
+
+## 🚀 安裝說明
+
+設定硬體驅動程式 (Edge TPU, Pigpio) 和 Python 環境需要特定的步驟。
+
+👉 **[閱讀詳細安裝指南](setup_guide.md)**
+
+### 快速摘要
+1.  **安裝驅動**: `pigpio` (伺服馬達) 和 `libedgetpu` (AI)。
+2.  **設定 Python**: 建立帶有 `--system-site-packages` 參數的虛擬環境。
+3.  **執行**: `python3 app.py`
+
+## 🎮 使用方法
+
+1.  啟動系統:
+    ```bash
+    # 確保 pigpio daemon 正在執行
+    sudo systemctl start pigpiod
+    
+    # 啟動應用程式
+    source venv/bin/activate
+    python3 app.py
+    ```
+2.  打開瀏覽器並前往 `http://<your-pi-ip>:5000`。
+3.  切換到 **AUTO** 模式，讓 AI 接手逗貓！
+
+## ⚙️ 詳細設定說明 (`config/config.json`)
+
+您可以透過修改此檔案來調整系統行為。
+
+### 1. Servos (伺服馬達)
+| 參數 | 說明 | 預設值 |
+| :--- | :--- | :--- |
+| `driver` | 驅動模式。`pigpio` (推薦，無抖動) 或 `gpio` (備用)。 | `pigpio` |
+| `pan_limits_deg` | 水平旋轉角度限制 `[min, max]`。 | `[20, 160]` |
+| `tilt_limits_deg` | 垂直旋轉角度限制 `[min, max]`。 | `[20, 140]` |
+
+### 2. Safety (安全機制)
+| 參數 | 說明 | 預設值 |
+| :--- | :--- | :--- |
+| `danger_margin_px` | 貓咪 BBox 周圍的危險緩衝區 (像素)。雷射進入此範圍即觸發閃避。 | `50` |
+| `cooldown_ms` | 閃避後的冷卻時間 (毫秒)，期間雷射保持關閉。 | `2000` |
+
+### 3. Auto Loop (自動逗貓邏輯)
+| 參數 | 說明 | 預設值 |
+| :--- | :--- | :--- |
+| `cooldown_sec` | 每次命中目標後的暫停時間 (秒)。 | `1.2` |
+| `retarget.pan_jitter_deg` | 隨機移動時的水平最大角度變化。 | `10` |
+| `retarget.tilt_jitter_deg` | 隨機移動時的垂直最大角度變化。 | `6` |
+| `safety.servo_settle_ms` | 伺服馬達移動後的穩定等待時間 (毫秒)，防止畫面模糊影響偵測。 | `250` |
+
+### 4. Laser (雷射)
+| 參數 | 說明 | 預設值 |
+| :--- | :--- | :--- |
+| `gpio_pin` | 雷射控制腳位 (BCM 編號)。 | `18` |
+| `max_on_ms` | 雷射單次最長開啟時間 (毫秒)，超時會強制關閉並重新選點。 | `800` |
+
+### 5. Detector (AI 偵測)
+| 參數 | 說明 | 預設值 |
+| :--- | :--- | :--- |
+| `current` | 使用的偵測器。`tflite` (真實) 或 `mock` (模擬)。 | `tflite` |
+| `tflite.backend` | 推論後端。`tpu` (Coral USB) 或 `cpu`。 | `tpu` |
+| `tflite.threshold` | 信心分數門檻 (0.0 - 1.0)。 | `0.3` |
+| `tflite.target_classes` | 追蹤的物件標籤清單。 | `["cat"]` |
+
+## 📂 專案結構
+
+- `app.py`: Flask 主程式入口。
+- `modules/`:
+    - `auto_pilot.py`: 主要控制迴圈 (FSM)。
+    - `detector_tflite.py`: AI 推論邏輯。
+    - `safety.py`: 幾何安全運算。
+    - `servo_driver.py`: 伺服馬達硬體抽象層。
+- `static/` & `templates/`: 網頁介面資源。
