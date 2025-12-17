@@ -24,6 +24,36 @@
 - **雷射二極體** (透過 GPIO 控制)
 - **外部 5V 電源** (強烈建議用於伺服馬達獨立供電)
 
+## 🔌 硬體架設與接線 (Hardware Setup & Wiring)
+
+為了確保 AI 追蹤時的穩定性並消除伺服馬達抖動 (Jitter)，本專案採用 **電源隔離 (Power Isolation)** 設計。
+
+### 接線邏輯圖
+![Wiring Diagram](assets/pi_laser_fritzing.png)
+
+### 📌 關鍵腳位對照表 (Pinout)
+
+| 元件 (Component) | 功能 | BCM (程式設定) | 實體腳位 (Physical) | 備註 |
+| :--- | :--- | :--- | :--- | :--- |
+| **Pan Servo (下/水平)** | PWM 訊號 | **GPIO 27** | Pin 13 | 負責左右轉動 |
+| **Tilt Servo (上/垂直)** | PWM 訊號 | **GPIO 17** | Pin 11 | 負責上下點頭 |
+| **Laser Module (雷射)** | 開關訊號 | **GPIO 18** | Pin 12 | Active High |
+| **GND (共地)** | 接地 | - | Pin 6 | **必須連接** |
+
+### ⚠️ 重要安全注意事項
+
+1.  **電源隔離 (Power Isolation)**：
+    * **伺服馬達 (Servos)** 由 **4xAAA 電池盒 (6V)** 獨立供電。
+    * **Raspberry Pi** 由原本的 USB-C 供電。
+    * **絕對不要** 將電池盒的紅線 (+) 接到樹莓派的 5V 腳位，這會導致樹莓派燒毀。
+
+2.  **共地 (Common Ground)**：
+    * 務必將電池盒的 **黑線 (-)** 與樹莓派的 **GND (Pin 6)** 連接。
+    * 如果沒有共地，控制訊號將無法傳輸，馬達會亂轉或不動。
+
+3.  **驅動程式**：
+    * 此接線配置配合 `pigpio` 驅動程式效果最佳。請確保已執行 `sudo pigpiod`。
+
 ## 🚀 安裝說明
 
 設定硬體驅動程式 (Edge TPU, Pigpio) 和 Python 環境需要特定的步驟。
