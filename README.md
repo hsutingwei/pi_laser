@@ -54,11 +54,22 @@
 3.  **驅動程式**：
     * 此接線配置配合 `pigpio` 驅動程式效果最佳。請確保已執行 `sudo pigpiod`。
 
-## 🚀 安裝說明
+## � 專案文件 (Documentation)
 
-設定硬體驅動程式 (Edge TPU, Pigpio) 和 Python 環境需要特定的步驟。
+為了讓您更容易上手，我們將教學分為兩部分：
 
-👉 **[閱讀詳細安裝指南](setup_guide.md)**
+1.  **🛠️ [硬體組裝指南 (Hardware Guide)](docs/hardware.md)**
+    *   如何組裝伺服馬達支架
+    *   雷射頭固定方式
+    *   相機架設位置
+    *   *(內含組裝照片與步驟)*
+
+2.  **💻 [軟體安裝指南 (Software Setup)](docs/setup_guide.md)**
+    *   驅動程式安裝 (Pigpio, Edge TPU)
+    *   Python 環境設定
+    *   常見問題排除
+
+## 🔌 硬體架設與接線 (Hardware Setup & Wiring)
 
 ### 快速摘要
 1.  **安裝驅動**: `pigpio` (伺服馬達) 和 `libedgetpu` (AI)。
@@ -118,12 +129,22 @@
 | `tflite.threshold` | 信心分數門檻 (0.0 - 1.0)。 | `0.3` |
 | `tflite.target_classes` | 追蹤的物件標籤清單。 | `["cat"]` |
 
-## 📂 專案結構
+## 📂 程式運作原理 (How it Works)
 
-- `app.py`: Flask 主程式入口。
-- `modules/`:
-    - `auto_pilot.py`: 主要控制迴圈 (FSM)。
-    - `detector_tflite.py`: AI 推論邏輯。
-    - `safety.py`: 幾何安全運算。
-    - `servo_driver.py`: 伺服馬達硬體抽象層。
-- `static/` & `templates/`: 網頁介面資源。
+如果您想了解程式碼是如何運作的，可以參考以下簡單的分類：
+
+### 🧠 大腦 (Logic)
+*   **`modules/auto_pilot.py`**: 這是整個系統的核心指揮官。它決定現在要「追蹤貓咪」、「閃避危險」還是「休息冷卻」。
+*   **`modules/safety.py`**: 負責計算安全距離。它會確保雷射點永遠不會直接照射到貓咪的眼睛或身體。
+
+### 👁️ 眼睛 (Vision)
+*   **`modules/detector_tflite.py`**: 使用 AI 模型 (透過 Coral TPU 加速) 來分析畫面，告訴系統「貓咪在哪裡」。
+*   **`modules/camera.py`**: 負責控制 Pi Camera 拍照和錄影，並將畫面傳送給 AI 和網頁。
+
+### 🦾 手腳 (Hardware)
+*   **`modules/servo_controller.py`**: 負責控制伺服馬達 (Pan/Tilt) 的轉動。
+*   **`modules/servo_driver.py`**: 底層驅動程式，確保馬達轉動時平滑且不會抖動 (Anti-jitter)。
+*   **`modules/laser_controller.py`**: 簡單的開關，負責控制雷射頭的亮滅。
+
+### 🌐 介面 (Interface)
+*   **`app.py`**: 這是主程式入口。它啟動了一個網頁伺服器，讓您可以用手機或電腦瀏覽器看到即時畫面，並手動控制雷射。
