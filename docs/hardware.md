@@ -50,6 +50,10 @@
 > **[📸 待補照片: 相機架設位置示意圖]**
 > *請在此處放一張相機與雷射相對位置的照片*
 
+**⚠️ 接線注意：**
+*   Pi Camera 的排線 (Ribbon Cable) **藍色面 (Blue Side)** 必須朝向 Raspberry Pi 的 **網路孔 (Ethernet Port)** 方向插入。
+*   插反會導致無法偵測到相機。
+
 ---
 
 ## 5. 整體連接 (Final Assembly)

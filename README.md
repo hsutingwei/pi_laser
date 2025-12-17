@@ -38,6 +38,7 @@
 | **Pan Servo (下/水平)** | PWM 訊號 | **GPIO 27** | Pin 13 | 負責左右轉動 |
 | **Tilt Servo (上/垂直)** | PWM 訊號 | **GPIO 17** | Pin 11 | 負責上下點頭 |
 | **Laser Module (雷射)** | 開關訊號 | **GPIO 18** | Pin 12 | Active High |
+| **Pi Camera (相機)** | 影像訊號 | **CSI Port** | CSI 介面 | 藍色面朝向網路孔 |
 | **GND (共地)** | 接地 | - | Pin 6 | **必須連接** |
 
 ### ⚠️ 重要安全注意事項
