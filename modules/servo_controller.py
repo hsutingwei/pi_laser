@@ -63,6 +63,8 @@ class ServoController:
         limits = [0, 180] if ignore_limits else self.pan_limits
         clamped = max(limits[0], min(angle, limits[1]))
         
+        print(f"[Servo] PanCmd: {angle:.1f} -> {clamped:.1f}")
+        
         self.current_pan = clamped
         if self.pan_servo:
             val = self._map_angle_to_value(clamped)
@@ -73,6 +75,8 @@ class ServoController:
         """Safely set Tilt angle within limits"""
         limits = [0, 180] if ignore_limits else self.tilt_limits
         clamped = max(limits[0], min(angle, limits[1]))
+        
+        print(f"[Servo] TiltCmd: {angle:.1f} -> {clamped:.1f}")
         
         self.current_tilt = clamped
         if self.tilt_servo:

@@ -278,6 +278,8 @@ def handle_joystick(data):
     d_pan = pan_input * -SPEED 
     d_tilt = tilt_input * SPEED 
     
+    print(f"[Joystick] In: P={pan_input:.2f}/T={tilt_input:.2f} -> D: P={d_pan:.2f}/T={d_tilt:.2f}")
+    
     real_pan, real_tilt = servos.move_relative(d_pan, d_tilt, ignore_limits=True)
     emit('gimbal_state', {'pan': real_pan, 'tilt': real_tilt})
 
