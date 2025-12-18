@@ -274,7 +274,7 @@ def handle_joystick(data):
     if abs(pan_input) < 0.1: pan_input = 0
     if abs(tilt_input) < 0.1: tilt_input = 0
     
-    SPEED = 2.0 
+    SPEED = 1.0 
     d_pan = pan_input * -SPEED 
     d_tilt = tilt_input * SPEED 
     
