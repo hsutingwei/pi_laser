@@ -6,6 +6,8 @@
 ![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%204-C51A4A)
 ![Accelerator](https://img.shields.io/badge/AI-Coral%20Edge%20TPU-blue)
 
+[![Pi Laser Cat Toy Demo](https://img.youtube.com/vi/SDhNb0hm5_w/0.jpg)](https://www.youtube.com/watch?v=SDhNb0hm5_w)
+
 ## ✨ 功能特色
 
 - **AI 追蹤**: 使用 MobileNet SSD v2 (Edge TPU 加速) 即時偵測並追蹤貓咪 (~20 FPS)。
