@@ -8,8 +8,8 @@ PIN_PAN = 27
 PIN_TILT = 17
 
 # Standard SG90 Pulse Widths (approximate, tuning may be needed)
-MIN_PULSE = 1.0/1000
-MAX_PULSE = 2.0/1000
+MIN_PULSE = 0.5/1000
+MAX_PULSE = 2.5/1000
 
 # Angle Limits from JSON (Calibrated)
 PAN_MIN_ANGLE = 0
@@ -43,8 +43,8 @@ class ServoController:
         self.current_tilt = 90
         
         # Move to center initially
-        self.set_pan(90)
-        self.set_tilt(80) # Calibrated Center
+        # self.set_pan(90)
+        # self.set_tilt(80) # Calibrated Center
 
     def set_limits(self, pan_limits=None, tilt_limits=None):
         if pan_limits: self.pan_limits = pan_limits
