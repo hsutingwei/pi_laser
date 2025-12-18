@@ -164,16 +164,16 @@
 
 ```mermaid
 graph TD
-    CAM["📷 Vision\n(Pi Camera)"] -->|Frame 640x480| AI["🧠 AI Detector\n(Edge TPU)"]
-    AI -->|BBox| LOGIC["⚙️ AutoPilot\n(Main Logic)"]
+    CAM["📷 Vision<br/>(Pi Camera)"] -->|Frame 640x480| AI["🧠 AI Detector<br/>(Edge TPU)"]
+    AI -->|BBox| LOGIC["⚙️ AutoPilot<br/>(Main Logic)"]
 
     subgraph Decision Loop
     LOGIC -->|Predict| SAFE{"⚠️ Safety Check"}
-    SAFE -- Detect Hit --> EVADE["⚡ EVADE Mode\nLaser OFF"]
-    SAFE -- Safe --> ROAM["🎯 ROAM Mode\nLaser ON"]
+    SAFE -- Detect Hit --> EVADE["⚡ EVADE Mode<br/>Laser OFF"]
+    SAFE -- Safe --> ROAM["🎯 ROAM Mode<br/>Laser ON"]
     end
 
-    ROAM -->|PID Control| SERVO["💪 Servos\n(Pan/Tilt)"]
+    ROAM -->|PID Control| SERVO["💪 Servos<br/>(Pan/Tilt)"]
     EVADE -->|Jitter Move| SERVO
 ```
 
