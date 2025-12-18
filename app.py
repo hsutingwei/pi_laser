@@ -77,9 +77,9 @@ servos.set_limits(p_lim, t_lim)
 
 # Apply Center
 center = CONFIG.get('servos', {}).get('center_deg')
-if center:
-    servos.set_pan(center[0])
-    servos.set_tilt(center[1])
+# if center:
+#     servos.set_pan(center[0])
+#     servos.set_tilt(center[1])
 
 laser = LaserController(factory)
 
