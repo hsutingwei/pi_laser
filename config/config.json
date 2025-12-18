@@ -30,6 +30,7 @@
     "auto_loop": {
         "enabled": true,
         "cooldown_sec": 1.2,
+        "roam_step_deg": 0.2,
         "retarget": {
             "pan_jitter_deg": 10,
             "tilt_jitter_deg": 6,

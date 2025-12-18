@@ -63,6 +63,9 @@ class AutoPilot:
         
         self.pan_limits = config_data.get('servos', {}).get('pan_limits_deg', [20, 160])
         self.tilt_limits = config_data.get('servos', {}).get('tilt_limits_deg', [20, 140])
+        
+        # Speed Config
+        self.step_size = self.config.get('roam_step_deg', 0.5)
 
     def start(self):
         if self.running: return
@@ -228,7 +231,7 @@ class AutoPilot:
 
     def _move_towards_target(self):
         """負責平滑移動到目標"""
-        step_size = 0.5 # Degrees per loop (adjust for speed)
+        step_size = self.step_size
         
         c_pan = self.servos.current_pan
         c_tilt = self.servos.current_tilt
