@@ -1,6 +1,7 @@
 # 🐱 Pi Laser Cat Toy (AI 驅動)
 
-這是一個基於 Raspberry Pi 4、Google Coral Edge TPU 和電腦視覺技術所打造的自動雷射逗貓玩具。
+打造一個能**自動辨識貓咪**、**安全逗貓**的智慧玩具！
+本專案結合 **Raspberry Pi 4** 與 **Google Coral Edge TPU** 強大的邊緣運算能力，實現即時物體偵測與伺服馬達控制，讓您的愛貓在主子沒空時也能盡情運動，同時具備「防雷射直射眼睛」的安全機制。
 
 ![Status](https://img.shields.io/badge/Status-Active-success)
 ![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%204-C51A4A)
@@ -95,6 +96,8 @@
 3.  **選擇模式**:
     *   **🤖 自動模式 (AUTO)**: 點擊 `Start Auto`，AI 會自動偵測貓咪並控制雷射。
     *   **🕹️ 手動模式 (MANUAL)**: 使用網頁上的虛擬搖桿 (Joystick) 直接控制伺服馬達，享受親自逗貓的樂趣！
+    
+    [![Manual Mode Demo](https://img.youtube.com/vi/wdW9ZSW1mls/0.jpg)](https://www.youtube.com/watch?v=wdW9ZSW1mls)
 
 ## 🎯 校正與安全邏輯 (Calibration & Safety)
 
@@ -154,6 +157,23 @@
 | `tflite.target_classes` | 追蹤的物件標籤清單。 | `["cat"]` |
 
 ## 📂 程式運作原理 (How it Works)
+
+### 📐 系統運作流程 (System Workflow)
+
+```mermaid
+graph TD
+    CAM[📷 Vision\n(Pi Camera)] -->|Frame 640x480| AI[🧠 AI Detector\n(Edge TPU)]
+    AI -->|BBox| LOGIC[⚙️ AutoPilot\n(Main Logic)]
+    
+    subgraph Decision Loop
+    LOGIC -->|Predict| SAFE{⚠️ Safety Check}
+    SAFE -- Detect Hit --> EVADE[⚡ EVADE Mode\nLaser OFF]
+    SAFE -- Safe --> ROAM[🎯 ROAM Mode\nLaser ON]
+    end
+    
+    ROAM -->|PID Control| SERVO[🦾 Servos\n(Pan/Tilt)]
+    EVADE -->|Jitter Move| SERVO
+```
 
 如果您想了解程式碼是如何運作的，可以參考以下簡單的分類：
 
