@@ -7,8 +7,10 @@
 ![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%204-C51A4A)
 ![Accelerator](https://img.shields.io/badge/AI-Coral%20Edge%20TPU-blue)
 
-[![Pi Laser Cat Toy Demo](https://img.youtube.com/vi/SDhNb0hm5_w/0.jpg)](https://www.youtube.com/watch?v=SDhNb0hm5_w)
-
+## 📹 演示影片
+[![Pi Laser Cat Toy Demo](https://img.youtube.com/vi/SDhNb0hm5_w/0.jpg)](https://youtu.be/zt5BhVulJOw)
+## 📹 Web UI 演示
+[![Web UI Demo](https://img.youtube.com/vi/ewC2ctpGABA/0.jpg)](https://youtu.be/ewC2ctpGABA)
 ## ✨ 功能特色
 
 - **AI 追蹤**: 使用 MobileNet SSD v2 (Edge TPU 加速) 即時偵測並追蹤貓咪 (~20 FPS)。
@@ -97,7 +99,7 @@
     *   **🤖 自動模式 (AUTO)**: 點擊 `Start Auto`，AI 會自動偵測貓咪並控制雷射。
     *   **🕹️ 手動模式 (MANUAL)**: 使用網頁上的虛擬搖桿 (Joystick) 直接控制伺服馬達，享受親自逗貓的樂趣！
     
-    [![Manual Mode Demo](https://img.youtube.com/vi/wdW9ZSW1mls/0.jpg)](https://www.youtube.com/watch?v=wdW9ZSW1mls)
+    [![Manual Mode Demo](https://img.youtube.com/vi/wdW9ZSW1mls/0.jpg)](https://youtu.be/wdW9ZSW1mls)
 
 ## 🎯 校正與安全邏輯 (Calibration & Safety)
 
